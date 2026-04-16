@@ -137,14 +137,76 @@ flowchart LR
     end
 
     AuthUI --> Active
-    Active -->|POST {url, method}| GenAI
-    Active -->|POST {url, mode}| SecScan
+    Active -->|"POST {url, method}"| GenAI
+    Active -->|"POST {url, mode}"| SecScan
     GenAI -->|HTTP Valid Payload| Target
     SecScan -->|Malicious Payload| Target
     Target -.->|200 OK| Active
     Target -.->|500 Trace| Explain
     Explain -->|Formatted Markdown| Active
     Active -->|Write Log| Hist
+```
+
+---
+
+---
+
+## Core Execution Sequence Diagram
+This unified sequence details the chronological execution flow when a user initiates a dynamic test generation and execution cycle.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor QA as QA Engineer
+    participant Frontend as Vite User Interface
+    participant Gateway as Express API Gateway
+    participant AI as Llama-3 AI Engine
+    participant Runner as Execution Node
+    participant DB as MongoDB Data Lake
+
+    QA->>Frontend: Constructs Base Endpoint Spec
+    Frontend->>Gateway: POST /api/ai/generate
+    Gateway->>AI: Prompts system via Groq
+    AI-->>Gateway: Returns JSON Test Suite Arrays
+    Gateway-->>Frontend: Renders Draft Tests
+
+    QA->>Frontend: Clicks 'Run Suite'
+    Frontend->>Gateway: Invokes Runner Route
+    Gateway->>Runner: Dispatches Payloads dynamically
+    Runner->>Runner: Performs strict Assertion Checks
+    Runner->>DB: Audits Request/Response Payloads
+    Runner-->>Frontend: Streams results to Latency Cards
+```
+
+---
+
+## Agent State Machine (Flowchart)
+The internal state transition logic illustrating how the pipeline gracefully recovers from LLM validation failures.
+
+```mermaid
+stateDiagram-v2
+    [*] --> IngestTarget: User initiates Scan
+    
+    state "Primary Generation" as Primary {
+        IngestTarget --> PromptGroq
+        PromptGroq --> ParseJSON
+    }
+
+    ParseJSON --> ValidateSchema
+    ValidateSchema --> EngineExecution: Schema is Valid
+    ValidateSchema --> FallbackLogic: Malformed JSON Detected
+    
+    state "Fallback Handling" as Fallback {
+        FallbackLogic --> PromptPollinations
+        PromptPollinations --> StrictParse
+    }
+    
+    StrictParse --> EngineExecution: Recovered Successfully
+    StrictParse --> FailureFlag: Total Prompt Collapse
+    
+    EngineExecution --> MongoDB_Audit
+    FailureFlag --> MongoDB_Audit
+    MongoDB_Audit --> [*]
 ```
 
 ---
