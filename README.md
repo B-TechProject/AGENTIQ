@@ -3,8 +3,6 @@
 
 A state-of-the-art AI pipeline that watches enterprise APIs 24/7, generates dynamic robust test cases, detects insidious security vulnerabilities, and analyzes software failures independently — all executed seamlessly with a sophisticated human-in-the-loop dashboard.
 
-![Dashboard Overview](docs/screenshots/dashboard.png)
-*📸 AgentIQ Real-time Telemetry Dashboard: Aggregating runtime velocities, vulnerability counts, and executing API probes.*
 
 ---
 
@@ -165,14 +163,11 @@ flowchart LR
 
 ## Visualizing Setup Scenarios 
 
-### The AI Test Runner Execution
-![Test Runner Interface](docs/screenshots/test_runner.png)
-*📸 The Test Runner Desk: An API Endpoint setup directly queries the integrated LLM models to formulate robust deterministic edge-case tests.*
+### The AI Test Runner Execution Architecture
+The Test Runner Desk serves as the primary execution context. An API Endpoint setup directly queries the integrated LLM models (Groq Llama-3/Pollinations) to formulate robust deterministic edge-case tests. The frontend then orchestrates sequential proxy payloads and traces the assertions natively.
 
-### The Security Assessment Scan
-![Security Interface](docs/screenshots/security.png)
-*📸 Dynamic Security Threat Detection: The active interceptor autonomously catching SQL Injection vulnerabilities based on reflection models.*
-
+### The Security Assessment Scan Execution
+The security assessment intercepts active API connections and automatically fires SQL Injection fuzz payloads, displaying detected critical vulnerabilities based on reflection models within the DOM on the active security table.
 ---
 
 ## Technical Stack Implementations
