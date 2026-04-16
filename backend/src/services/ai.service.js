@@ -22,15 +22,18 @@ ${description}
 
 IMPORTANT RULES:
 - Return ONLY JSON array
-- NO explanation
-- NO markdown
-- EXACTLY 3 test cases:
-  1. Valid request
-  2. Invalid request
-  3. Edge case
+- NO explanation outside JSON
+- NO markdown outside JSON
+- EXACTLY 4 test cases:
+  1. Valid positive request
+  2. Alternative positive request or valid boundary
+  3. Meaningful invalid request (e.g., missing parameter)
+  4. Extreme negative edge case (e.g., malformed payload/query, unauthorized)
 
-- Each test must include:
-  name, method, url, body, assertions
+- Each test MUST include:
+  name, method, url, body, assertions, description
+
+- "description" MUST beautifully explain exactly what this test is verifying and WHY it expects its particular status code.
 
 - Assertions must include:
   status
@@ -42,21 +45,16 @@ IMPORTANT RULES:
 Example:
 [
   {
-    "name": "Valid request",
+    "name": "Valid Request",
+    "description": "Verifies that the endpoint successfully returns data when provided a standard, completely valid request.",
     "method": "${method}",
     "url": "${url}",
     "body": {},
     "assertions": { "status": 200 }
   },
   {
-    "name": "Invalid request",
-    "method": "${method}",
-    "url": "${url}",
-    "body": {},
-    "assertions": { "status": 400 }
-  },
-  {
-    "name": "Edge case",
+    "name": "Invalid Request - Missing Query",
+    "description": "Intentionally simulates a missing/invalid parameter to ensure the server correctly catches and rejects it with a 400 Bad Request.",
     "method": "${method}",
     "url": "${url}",
     "body": {},
@@ -67,39 +65,49 @@ Example:
 
 IMPORTANT:
 
-- Each test MUST be different
+- Each test MUST be exclusively different
 - Do NOT repeat same request
-
-- For GET APIs:
-  - Use query parameters for variation
-  - Example:
-    ?userId=1
-    ?invalidParam=xyz
-
-- Invalid test MUST actually simulate failure
-  (e.g., wrong query param, invalid endpoint)
-
-- Edge case MUST be meaningful
-  (e.g., empty query, large values)
-
-- Avoid words like "simulated"
+- For GET APIs, use query parameters for variation (?userId=1 vs ?invalidParam=xyz)
 `;
 
-    // 🚀 GEMINI 2.5 FLASH API CALL
-    const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY_2}`,
-      {
-        contents: [
-          {
-            parts: [{ text: prompt }]
-          }
-        ]
-      }
-    );
+    let raw = "";
 
-    // 🔍 Extract raw response
-    const raw =
-      response?.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    try {
+        // 🚀 GROQ Llama 3 API CALL (Primary attempt if key exists)
+        if (process.env.GROQ_API_KEY) {
+            const groqRes = await axios.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                {
+                    model: "llama-3.1-8b-instant", // Automatically maps to the latest Llama 3 endpoint
+                    messages: [
+                        { role: "system", content: "You are a senior QA engineer. Return ONLY a valid JSON array [] containing exactly 3 test case objects. Do NOT return a single object, it MUST be wrapped in an array []." },
+                        { role: "user", content: prompt }
+                    ],
+                    response_format: { type: "json_object" }
+                },
+                { headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` } }
+            );
+            raw = groqRes?.data?.choices?.[0]?.message?.content || "";
+        } else {
+            throw new Error("No Groq Key - Falling back");
+        }
+    } catch(err) {
+        console.log("Groq unavailable, falling back to FREE Pollinations AI (GPT-4o)!");
+        
+        // 🚀 POLLINATIONS AI (Completely free fallback, no key required)
+        const pollRes = await axios.post(
+            "https://text.pollinations.ai/",
+            {
+                messages: [
+                    { role: "system", content: "You are a senior QA engineer. Return ONLY a valid JSON array [] containing exactly 3 test case objects. Do NOT return a single object, it MUST be wrapped in an array []." },
+                    { role: "user", content: prompt }
+                ],
+                jsonMode: true,
+                model: "openai"
+            }
+        );
+        raw = typeof pollRes.data === 'string' ? pollRes.data : JSON.stringify(pollRes.data);
+    }
 
     if (!raw) {
       throw new Error("Empty AI response");
@@ -113,12 +121,18 @@ IMPORTANT:
       .replace(/```/g, "")
       .trim();
 
-    // 🔥 STEP 2: EXTRACT JSON ARRAY
-    const start = cleaned.indexOf("[");
-    const end = cleaned.lastIndexOf("]");
+    // 🔥 STEP 2: EXTRACT JSON (Array or Object)
+    let start = cleaned.indexOf("[");
+    let end = cleaned.lastIndexOf("]");
 
+    // If no array found, look for an object
     if (start === -1 || end === -1) {
-      throw new Error("No JSON array found in AI response");
+      start = cleaned.indexOf("{");
+      end = cleaned.lastIndexOf("}");
+      
+      if (start === -1 || end === -1) {
+        throw new Error("No JSON structure found in AI response");
+      }
     }
 
     cleaned = cleaned.substring(start, end + 1);
@@ -132,9 +146,22 @@ IMPORTANT:
       throw new Error("Invalid JSON from AI");
     }
 
-    // 🔥 STEP 4: VALIDATE STRUCTURE
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      throw new Error("AI returned empty or invalid test cases");
+    // 🔥 STEP 4: NORMALIZE TO ARRAY
+    if (!Array.isArray(parsed)) {
+      // Find the first value that is an array if the LLM nested it under some random key
+      const foundArray = Object.values(parsed).find(val => Array.isArray(val));
+      if (foundArray) {
+        parsed = foundArray;
+      } else {
+        parsed = [parsed];
+      }
+    }
+    
+    // Flatten any weird nested arrays (Groq hallucinates nested arrays sometimes)
+    parsed = parsed.flat(Infinity).filter(item => item && typeof item === 'object' && Object.keys(item).length > 0);
+
+    if (parsed.length === 0) {
+      throw new Error("AI returned empty test cases");
     }
 
     // 🔥 STEP 5: NORMALIZE + FIX LOGIC
@@ -168,7 +195,7 @@ IMPORTANT:
       
         return {
           name: test.name || `Test Case ${index + 1}`,
-          description: test.name || `Test Case ${index + 1}`, // ✅ ADD THIS
+          description: test.description || `Simulating ${test.name || 'Test Case ' + (index+1)} for ${method} Request.`,
           method: fixedMethod,
           url: fixedUrl,
           body: fixedBody,
@@ -195,7 +222,7 @@ IMPORTANT:
     return [
       {
         name: "Fallback Valid Request",
-        description: "Fallback Valid Request",
+        description: "Intentionally running a valid functional payload",
         method,
         url,
         body: {},
@@ -208,7 +235,7 @@ IMPORTANT:
       },
       {
         name: "Fallback Invalid Request",
-        description: "Fallback Valid Request",
+        description: "Intentionally running an invalid functional payload to observe rejection",
         method,
         url,
         body: {},
@@ -221,7 +248,7 @@ IMPORTANT:
       },
       {
         name: "Fallback Edge Case",
-        description: "Fallback Valid Request",
+        description: "Simulating a bizarre edge case payload to observe server stability",
         method,
         url,
         body: {},

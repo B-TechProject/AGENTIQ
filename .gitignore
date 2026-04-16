@@ -1,5 +1,7 @@
 # dependencies
-/node_modules
+node_modules/
+**/node_modules/
+
 /.pnp
 .pnp.js
 
@@ -25,15 +27,5 @@ yarn-error.log*
 .env.production.local
 .env
 
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-
-# electron-builder output
-/dist_electron
-/build
-
-
-backend/.envbackend/.env
+backend/.env
+frontend/.env

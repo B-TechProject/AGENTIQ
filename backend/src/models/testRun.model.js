@@ -18,7 +18,7 @@ const testRunSchema = new mongoose.Schema({
       name: String,
       status: String,
       responseTime: Number,
-      assertions: Array,
+      assertions: mongoose.Schema.Types.Mixed, // ✅ Changed to Mixed because it's an object { check, expected, actual, pass }
       error: String, 
       explanation: String // ✅ Added this to store AI insights
     }

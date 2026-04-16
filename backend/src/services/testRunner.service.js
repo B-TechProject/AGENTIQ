@@ -60,7 +60,7 @@ export const runSingleTest = async (test) => {
   // ✅ FINAL PASS CHECK
   const pass = actualStatus === expectedStatus;
 
-  let explanation = null;
+  let explanation = test.description || null;
 
   // 🔥 ONLY ONE AI EXPLANATION (optimization)
   if (!pass && !explanationUsed) {

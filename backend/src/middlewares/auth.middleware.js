@@ -17,7 +17,14 @@ async function protectRoute(req, res, next) {
       return res.status(401).json({ message: "Unauthorized access" });
     }
 
-    const decode = jwt.verify(token, process.env.JWT_SECRET);
+    let decode;
+    try {
+      decode = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      console.error("JWT Verification failed:", err.message);
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
     if (!decode) {
       return res.status(401).json({ message: "Unauthorized access" });
     }

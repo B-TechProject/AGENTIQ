@@ -6,6 +6,7 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { connectDB } from "./lib/db.js";
+import jwt from "jsonwebtoken";
 
 import authRoutes from "./routes/auth.route.js";
 import protectRoute from "./middlewares/auth.middleware.js";
@@ -109,8 +110,12 @@ app.get(
         plan: "free",
       };
 
-      // 🔥 TEMP TOKEN (replace with JWT later)
-      const token = "google-auth-token";
+      // 🔥 CREATE VALID JWT TOKEN
+      const token = jwt.sign(
+        { id: user.id, email: user.email, name: user.name },
+        process.env.JWT_SECRET || 't0SxE6P21qEuYU89r9JGlfOsiZHf5wPG',
+        { expiresIn: "7d" }
+      );
 
       // 🔥 REDIRECT TO FRONTEND
       res.redirect(
