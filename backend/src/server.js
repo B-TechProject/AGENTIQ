@@ -113,7 +113,7 @@ app.get(
       // 🔥 CREATE VALID JWT TOKEN
       const token = jwt.sign(
         { id: user.id, email: user.email, name: user.name },
-        process.env.JWT_SECRET || 't0SxE6P21qEuYU89r9JGlfOsiZHf5wPG',
+        process.env.JWT_SECRET,
         { expiresIn: "7d" }
       );
 
