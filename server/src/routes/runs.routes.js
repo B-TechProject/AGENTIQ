@@ -8,6 +8,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { startRun, listRuns, getRun } from '../services/run.service.js';
 import { getSpec } from '../services/spec.service.js';
+import { getStats } from '../services/stats.service.js';
 import { protectRoute } from '../middleware/auth.js';
 import { ok, fail } from '../utils/http.js';
 import { RUN_STATE } from '../models/TestRun.js';
@@ -86,6 +87,17 @@ router.get('/', protectRoute, async (req, res) => {
   if (!parsed.success) return fail(res, 400, 'VALIDATION_ERROR', 'Invalid pagination');
   const { runs, total } = await listRuns({ userId: req.user._id, ...parsed.data });
   return ok(res, { total, count: runs.length, runs });
+});
+
+/**
+ * GET /api/runs/stats — dashboard aggregates (docs/01_PRD.md F6).
+ *
+ * Declared BEFORE /:id: Express matches in order, so with the parameter route
+ * first, "stats" would be captured as an id and always 400.
+ */
+router.get('/stats', protectRoute, async (req, res) => {
+  const stats = await getStats({ userId: req.user._id });
+  return ok(res, stats);
 });
 
 router.get('/:id', protectRoute, async (req, res) => {

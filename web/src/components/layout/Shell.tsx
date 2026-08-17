@@ -20,7 +20,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard, PlayCircle, ShieldCheck, FileJson, ArrowLeftRight,
-  History, UploadCloud, Wrench, ScrollText, Info, Plus, Menu,
+  History, UploadCloud, Wrench, ScrollText, Info, Plus, Menu, Settings,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/cn';
@@ -43,6 +43,10 @@ const TRUST = [
   { to: '/tools', label: 'Tool Registry', icon: Wrench },
   { to: '/audit', label: 'Audit Log', icon: ScrollText },
   { to: '/about', label: 'About', icon: Info },
+];
+
+const ACCOUNT = [
+  { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
 function NavGroup({ title, items, onNavigate }: {
@@ -120,6 +124,8 @@ export function Shell() {
           <NavGroup title="Work" items={WORK} onNavigate={() => setDrawerOpen(false)} />
           <div className="mx-3 my-1 border-t border-line" />
           <NavGroup title="Trust" items={TRUST} onNavigate={() => setDrawerOpen(false)} />
+          <div className="mx-3 my-1 border-t border-line" />
+          <NavGroup title="Account" items={ACCOUNT} onNavigate={() => setDrawerOpen(false)} />
         </div>
 
         <div className="border-t border-line px-4 py-2.5">

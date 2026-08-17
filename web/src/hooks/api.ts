@@ -8,7 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '@/services/api';
 import type {
-  TestRun, McpTool, AuditEvent, ApiSpec, Grant, RiskClass, HealthStatus, HttpMethod,
+  TestRun, McpTool, AuditEvent, ApiSpec, Grant, RiskClass, HealthStatus, HttpMethod, Finding,
 } from '@/types';
 
 /* ── Health ───────────────────────────────────────────────────────────────── */
@@ -103,6 +103,53 @@ export const useRun = (id: string | undefined) => useQuery({
   queryFn: () => apiGet<{ run: TestRun }>(`/runs/${id}`),
   enabled: Boolean(id),
 });
+
+/* ── Dashboard stats ──────────────────────────────────────────────────────── */
+
+export interface DashboardStats {
+  totals: {
+    totalRuns: number; completedRuns: number; failedRuns: number;
+    testsExecuted: number; testsPassed: number; testsFailed: number; discarded: number;
+    passRate: number | null; medianLatencyMs: number | null;
+    tokensUsed: number; costUsd: number;
+  };
+  findings: { critical: number; high: number; medium: number; low: number };
+  totalFindings: number;
+  pulse: { date: string; passed: number; failed: number; runs: number }[];
+  audit: Record<string, number>;
+  recent: {
+    id: string; url: string; method: HttpMethod; state: string;
+    passed: number; totalTests: number; findings: number; startedAt: string;
+  }[];
+}
+
+export const useStats = () => useQuery({
+  queryKey: ['runs', 'stats'],
+  queryFn: () => apiGet<DashboardStats>('/runs/stats'),
+});
+
+/* ── Security scan ────────────────────────────────────────────────────────── */
+
+export interface ScanResult {
+  families: { family: string; owasp: string; checked: number; findings: Finding[]; note?: string; error?: string }[];
+  findings: Finding[];
+  summary: {
+    familiesRun: number; familiesClean: number; familiesErrored: number;
+    totalFindings: number; bySeverity: Record<string, number>; disclaimer: string;
+  };
+  needsGrant: boolean;
+}
+
+export function useScan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      url: string; method: HttpMethod; intendedPublic: boolean;
+      headers?: Record<string, string>;
+    }) => apiPost<ScanResult>('/security/scan', input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mcp', 'audit'] }),
+  });
+}
 
 /* ── Specs ────────────────────────────────────────────────────────────────── */
 

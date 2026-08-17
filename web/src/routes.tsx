@@ -15,6 +15,10 @@ import { SpecsPage } from '@/pages/SpecsPage';
 import { ToolRegistryPage } from '@/pages/ToolRegistryPage';
 import { AuditLogPage } from '@/pages/AuditLogPage';
 import { AboutPage } from '@/pages/AboutPage';
+import { DashboardPage } from '@/pages/DashboardPage';
+import { SecurityPage } from '@/pages/SecurityPage';
+import { SettingsPage } from '@/pages/SettingsPage';
+import { ApiClientPage } from '@/pages/ApiClientPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -28,17 +32,18 @@ export const router = createBrowserRouter([
     element: <RequireAuth><Shell /></RequireAuth>,
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
-      { path: 'dashboard', element: <Placeholder title="Dashboard" phase={12} /> },
+      { path: 'dashboard', element: <DashboardPage /> },
       { path: 'run', element: <TestRunnerPage /> },
       { path: 'run/:id', element: <RunDetailPage /> },
-      { path: 'security', element: <Placeholder title="Security" phase={11} /> },
+      { path: 'security', element: <SecurityPage /> },
       { path: 'specs', element: <SpecsPage /> },
-      { path: 'client', element: <Placeholder title="API Client" phase={11} /> },
+      { path: 'client', element: <ApiClientPage /> },
       { path: 'history', element: <HistoryPage /> },
       { path: 'deploy', element: <Placeholder title="Deploy" phase={13} /> },
       { path: 'tools', element: <ToolRegistryPage /> },
       { path: 'audit', element: <AuditLogPage /> },
       { path: 'about', element: <AboutPage /> },
+      { path: 'settings', element: <SettingsPage /> },
     ],
   },
 
