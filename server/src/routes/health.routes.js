@@ -20,7 +20,7 @@ const router = Router();
 export function llmProviders() {
   return [
     { name: 'groq', configured: Boolean(env.GROQ_API_KEY), role: env.LLM_PRIMARY === 'groq' ? 'primary' : 'fallback' },
-    { name: 'gemini', configured: Boolean(env.GEMINI_API_KEY), role: env.LLM_PRIMARY === 'gemini' ? 'primary' : 'fallback' },
+    { name: 'bedrock', configured: Boolean(env.BEDROCK_MODEL_ID), role: env.LLM_PRIMARY === 'bedrock' ? 'primary' : 'fallback' },
   ];
 }
 

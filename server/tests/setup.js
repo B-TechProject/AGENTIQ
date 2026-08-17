@@ -21,5 +21,5 @@ delete process.env.GOOGLE_CLIENT_SECRET;
 
 // Keep provider chips deterministic in health assertions.
 delete process.env.GROQ_API_KEY;
-delete process.env.GEMINI_API_KEY;
+delete process.env.BEDROCK_MODEL_ID;
 delete process.env.RENDER_API_KEY;

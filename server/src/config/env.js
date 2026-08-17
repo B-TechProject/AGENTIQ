@@ -61,10 +61,12 @@ export const envSchema = z
     API_BASE_URL: z.url().default('http://localhost:3001'),
 
     // ── LLM providers (optional until Phase 7) ───────────────────────────────
+    // Gemini was dropped 17 Aug 2026: Bedrock covers the fallback role and gives
+    // access to many model families through one interface, so a second bespoke
+    // provider key earns nothing. See docs/05_AWS_ARCHITECTURE.md.
     GROQ_API_KEY: z.string().optional(),
-    GEMINI_API_KEY: z.string().optional(),
-    LLM_PRIMARY: z.enum(['groq', 'gemini', 'bedrock']).default('groq'),
-    LLM_FALLBACK: z.enum(['groq', 'gemini', 'bedrock']).default('gemini'),
+    LLM_PRIMARY: z.enum(['groq', 'bedrock']).default('groq'),
+    LLM_FALLBACK: z.enum(['groq', 'bedrock']).default('bedrock'),
 
     // ── AWS (optional — see docs/05_AWS_ARCHITECTURE.md) ─────────────────────
     // Deliberately no AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY: credentials come
@@ -104,7 +106,6 @@ export const OPTIONAL_FEATURE_VARS = {
   GOOGLE_CLIENT_ID: 'Google OAuth sign-in',
   GOOGLE_CLIENT_SECRET: 'Google OAuth sign-in',
   GROQ_API_KEY: 'Groq LLM provider',
-  GEMINI_API_KEY: 'Gemini LLM provider',
   BEDROCK_MODEL_ID: 'Bedrock LLM provider',
   AWS_S3_BUCKET: 'S3 spec & artifact storage',
   AWS_SECRETS_ID: 'Secrets Manager',
@@ -112,7 +113,7 @@ export const OPTIONAL_FEATURE_VARS = {
 };
 
 const SECRET_KEYS = new Set([
-  'JWT_SECRET', 'MONGO_URI', 'GROQ_API_KEY', 'GEMINI_API_KEY',
+  'JWT_SECRET', 'MONGO_URI', 'GROQ_API_KEY',
   'GOOGLE_CLIENT_SECRET', 'GOOGLE_CLIENT_ID', 'RENDER_API_KEY',
 ]);
 
@@ -192,7 +193,7 @@ export function formatEnvTable(source = process.env, parsed = null) {
  */
 export const ENV_KEYS = [
   'NODE_ENV', 'PORT', 'MONGO_URI', 'JWT_SECRET', 'CORS_ORIGIN',
-  'APP_BASE_URL', 'API_BASE_URL', 'GROQ_API_KEY', 'GEMINI_API_KEY',
+  'APP_BASE_URL', 'API_BASE_URL', 'GROQ_API_KEY',
   'LLM_PRIMARY', 'LLM_FALLBACK',
   'AWS_REGION', 'AWS_S3_BUCKET', 'AWS_SECRETS_ID', 'BEDROCK_MODEL_ID',
   'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',

@@ -54,7 +54,7 @@ describe('GET /api/health', () => {
   it('reports providers as unconfigured when no key is set, never as a static badge', async () => {
     const { body } = await request(app).get('/api/health');
     const names = body.data.llmProviders.map((p) => p.name).sort();
-    expect(names).toEqual(['gemini', 'groq']);
+    expect(names).toEqual(['bedrock', 'groq']);
     // Sem 6 shipped "Agents Online" as a hardcoded chip. Every flag here is derived.
     expect(body.data.llmProviders.every((p) => p.configured === false)).toBe(true);
     expect(body.data.googleOAuth).toBe('disabled');

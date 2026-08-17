@@ -40,7 +40,7 @@ describe('required variables', () => {
 });
 
 describe('optional variables must not break boot', () => {
-  it.each(['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GROQ_API_KEY', 'GEMINI_API_KEY', 'RENDER_API_KEY'])(
+  it.each(['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GROQ_API_KEY', 'RENDER_API_KEY'])(
     'is valid without %s',
     (key) => {
       const source = { ...VALID };
