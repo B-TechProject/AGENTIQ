@@ -1,7 +1,7 @@
 {
   "name": "agentiq-workspace",
   "version": "1.0.0",
-  "description": "AgentIQ Project Workspace",
+  "description": "AGENTIQ workspace root",
   "private": true,
   "scripts": {
     "install:all": "npm install && npm --prefix frontend install && npm --prefix backend install",
