@@ -321,3 +321,122 @@ under `_archive/`, and git commands run inside those folders now resolve to the 
 
 Phase 3 renames these directories to `server/` and `web/` per `docs/02_TRD.md` §4; the package names
 move with them then.
+
+---
+
+## Phase 3 — Foundation · 17 Aug 2026 · ✅ complete
+
+Five commits, pushed. **62 → 65 tests, all green. Lint, typecheck and CI pipeline all pass.**
+
+### Structure (`docs/02_TRD.md` §4)
+
+`backend/` → `server/`, `frontend/` → `web/`, preserved as git renames (76 detected), so history
+survives. New server layout:
+
+```
+server/src/index.js        boot only — validate env, connect, listen
+server/src/app.js          express app, NO listen, so tests can import it
+server/src/config/         env.js (Zod), passport.js (lazy registration)
+server/src/lib/            db.js, logger.js
+server/src/middleware/     auth.js, error.js, validateRequest.js
+server/src/models/         User.js (unified)
+server/src/utils/          http.js (response envelope), token.js
+server/scripts/            migrate-users.js
+server/tests/              5 suites
+```
+
+### Dependencies
+
+**Every version in `docs/02_TRD.md` §2 resolved exactly as documented** — the matrix is real, not
+aspirational. `npm ls --depth=0` exits 0 with no `ERESOLVE` and no peer warnings. The only correction
+was mine: the TRD says `eslint@9` without a patch and I invented `9.42.0`, which does not exist;
+latest 9.x is `9.39.5`.
+
+Removed: native `bcrypt` (unused, per TRD), `@google/generative-ai` and `form-data` (never imported),
+`express-session` (Google OAuth now uses `session: false` since a JWT is minted immediately).
+Added beyond the TRD list: `@vitest/coverage-v8@4.1.10` (Phase 15 needs the coverage gate) and
+`@eslint/js@9.39.5` (required by ESLint 9 flat config).
+
+### Bugs closed
+
+| | Fix | Proof |
+|---|---|---|
+| **BUG-4** boot crash | Passport Google strategy registers only when both credentials are present | `tests/boot.test.js` — the whole suite runs with Google deliberately unconfigured |
+| **BUG-3** JWT secret | Required, 32-char minimum, no default; boot exits non-zero without it | `tests/env.test.js` |
+| Hash leak | `registerUser` returned the whole mongoose document. `toJSON` now strips `passwordHash` | `tests/auth.test.js` asserts no `$2b$` anywhere in the response |
+| JWT in logs | Two `console.log` calls printed raw tokens; removed, plus central pino redaction | verified on a live run — no JWT, hash or password in the log |
+| Two user collections | `mongoUsers` + `googleUsers` → one `User` with `authProviders[]` | `tests/migration.test.js` |
+| Inconsistent expiry | 3d in `token.js` vs 7d in `server.js` → 7d everywhere, HS256 pinned | `utils/token.js` |
+| Email enumeration | Login returned distinguishable responses for unknown email vs wrong password | `tests/auth.test.js` asserts the two responses are byte-identical |
+| Hardcoded callback | OAuth callback was pinned to `localhost:3001`; now from `API_BASE_URL` | `config/passport.js` |
+| Cookie flags | `secure:true`/`sameSite:none` unconditionally, so cookies were dropped over plain http locally | `utils/token.js` |
+
+### The architecture guard
+
+`server/tests/architecture.test.js` fails the build if `axios`, `fetch`, `http.request`, `node:net`,
+`child_process` or any HTTP client library appears under `server/src/agents/**`. Written now, before
+`agents/` has content, exactly as `docs/02_TRD.md` §11 instructs. It passes vacuously today and
+becomes load-bearing in Phases 7–8. Two companion tests prove the patterns actually match real
+violations and correctly ignore mentions inside comments — **a guard that can never fail is not a
+guard.**
+
+### Definition of done — verified from a fresh clone
+
+Cloned from GitHub into a scratch directory, `npm install`, then a `.env` containing **only**
+`MONGO_URI` and `JWT_SECRET`:
+
+| Check | Result |
+|---|---|
+| `npm install` from fresh clone | ✅ 721 packages, 4s |
+| Boot with **no** `.env` at all | ✅ prints the table, names the 2 missing vars, exits 1 |
+| Boot with only the 2 required vars | ✅ connects and listens |
+| `GET /api/health` | ✅ **200**, `mongo: connected`, providers reported as unconfigured |
+| `POST /api/auth/register` | ✅ 201, no hash in the response |
+| `POST /api/auth/login` correct / wrong | ✅ 200 / 401 |
+| `GET /api/auth/me` with / without token | ✅ 200 / 401 |
+| `GET /api/auth/google` unconfigured | ✅ **503 with an explanation, not a crash** |
+| Secrets in the server log | ✅ none |
+| `npm run lint` / `typecheck` / `test` | ✅ all pass |
+| `npm ci` from the lockfile | ✅ clean |
+
+### Deviations
+
+**V6 · `web/` keeps its Sem 6 dependencies for now.** Phase 3 task 2 says to install both dependency
+sets, but Phase 10 says *"Scaffold fresh; port components. Do not migrate incrementally"* and the web
+tree is React 18 / Vite 5 / Tailwind v3. Installing React 19 / Vite 8 / Tailwind v4 into a v3-configured
+app would leave the repo broken for seven phases and the work would be thrown away at Phase 10.
+`web/` was renamed and wired into the workspace; its dependency upgrade happens as part of the Phase 10
+fresh scaffold. It currently builds and typechecks clean, so CI is meaningful today.
+
+**V7 · Sem 6 feature routes kept wired.** `ai`, `analyze`, `request`, `security`, `tests`, `runs` are
+mounted on the new foundation rather than dropped, so the app does not regress in capability while the
+foundation is rebuilt underneath it. Their handlers still contain the defects in
+`docs/00_SEM6_AUDIT.md` and are rewritten in Phases 5–9. Coupling was shallow — each imported only
+`protectRoute` — and they use `req.user.id`, which the new model provides as a mongoose virtual.
+
+**V8 · `npm run evaluate` is wired but exits non-zero.** The harness is Phase 14 and depends on the
+Phase 6 fixtures. It prints what is missing rather than a plausible-looking table.
+
+### Not done / carried forward
+
+- **The MongoDB Atlas cluster no longer exists.** `cluster0.t0xwwwe.mongodb.net` returns `NXDOMAIN`
+  while `github.com` resolves normally, so this is not a local DNS problem — the free-tier M0 cluster
+  was reclaimed after inactivity. The DoD was therefore verified against a local `mongod`. **A new
+  Atlas cluster and `MONGO_URI` are needed before anything can run against real data**, and the user
+  migration cannot be run until then. This resolves part of Q2: the Mongo credentials in `.env` are dead.
+- `GEMINI_API_KEY` reads as unset because `.env` carries the legacy names `NEW_GEMINI_API_KEY` and
+  `GEMINI_API_KEY_2`. Rename when the LLM abstraction lands in Phase 7.
+- `web/src/services/api.ts` still hardcodes `http://localhost:3001/api`; `VITE_API_URL` still unread.
+  Phase 10.
+- `web/src/hooks/useAI.ts` still calls Anthropic's API from the browser with "Simulate…" prompts.
+  Dead code. **Must not survive Phase 10.**
+- Mock constants (`MOCK_PULSE_DATA`, `MOCK_AGENTS`, `logRows`, `statCards`) still in `web/`. Phases 10–12.
+- Coverage gate (70% on `mcp/**` and `agents/**`) not enabled — neither tree exists yet. Phase 15.
+- CI has not yet run on GitHub; the pipeline was verified locally step by step.
+
+### Open questions
+
+| # | Question | Blocks |
+|---|---|---|
+| Q2a | **New MongoDB Atlas cluster needed** — the old one is gone. Create an M0 and supply `MONGO_URI`. | running against real data; the user migration |
+| Q2b | Is the Groq key in `.env` still valid? Gemini keys are under legacy names — which should be canonical? | Phase 7 |
