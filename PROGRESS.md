@@ -440,3 +440,128 @@ Phase 6 fixtures. It prints what is missing rather than a plausible-looking tabl
 |---|---|---|
 | Q2a | **New MongoDB Atlas cluster needed** — the old one is gone. Create an M0 and supply `MONGO_URI`. | running against real data; the user migration |
 | Q2b | Is the Groq key in `.env` still valid? Gemini keys are under legacy names — which should be canonical? | Phase 7 |
+
+---
+
+## Phase 4 — Egress guard (SSRF) · 17 Aug 2026 · ✅ complete
+
+`server/src/mcp/ipRules.js` (pure classification) + `server/src/mcp/egress.js` (the guarded
+request path). **90 tests.**
+
+Order of operations per `docs/02_TRD.md` §7: scheme allow-list → hostname block → resolve DNS →
+validate **every** resolved address → pin the IP → per-host rate limit → manual redirects (max 3,
+re-validated each hop) → streamed response with a byte cap.
+
+### Why resolve-then-validate, and why pin
+
+Validating the hostname proves nothing — an attacker controls DNS and can point `evil.com` at
+`169.254.169.254`. So we resolve first and judge the **address**. Pinning then closes the TOCTOU
+window: Node's agent accepts a `lookup` override, so the socket connects to the address already
+validated rather than re-querying DNS. Host header and TLS SNI still carry the real hostname, so
+virtual hosting and certificate validation are unaffected.
+
+Since `docs/05_AWS_ARCHITECTURE.md` moved deployment to AWS this stopped being theoretical:
+`169.254.169.254` is the instance metadata endpoint, so an unguarded SSRF is a direct path to the
+task role's credentials.
+
+### Two bugs the tests caught
+
+- **`::1` reported as "unspecified" rather than "loopback".** It matched the IPv4-compatible pattern
+  as `::0.0.0.1` and was unwrapped into the `0.0.0.0/8` rule. Still blocked, but for the wrong
+  reason — logic that is coincidentally right breaks under the next small change. Singleton
+  addresses are now judged before any IPv4 unwrapping.
+- **Bracketed IPv6 skipped IP classification entirely.** `new URL('http://[::1]/')` yields hostname
+  `'[::1]'` *with* brackets, so `isIP()` rejected it and the request fell through to a DNS lookup —
+  a security decision taking the wrong code path. Brackets are stripped before classification.
+
+Both were found only because there is one test **per range** rather than a single "blocks private
+IPs" test.
+
+Verified live: the real AWS and GCP metadata endpoints are refused, in both IPv4 and
+IPv4-mapped-IPv6 form. Boundary addresses just outside each private range (`172.15.255.255`,
+`172.32.0.1`, `169.253.255.255`, `169.255.0.0`) are asserted to remain **allowed** — a guard that
+blocks everything is useless.
+
+---
+
+## Phase 5 — The MCP layer ★ · 17 Aug 2026 · ✅ complete
+
+**The headline.** `docs/00_SEM6_AUDIT.md` §5 named this the single largest threat to the grade: the
+Sem 6 report described MCP as implemented while the only occurrence of "MCP" in the codebase was a
+UI badge reading "MCP Powered". **196 tests green.**
+
+| File | Role |
+|---|---|
+| `mcp/registry.js` | `McpServer`, `defineTool`, `withGuards`, `TOOLS` mirror |
+| `mcp/permissions.js` | four risk classes, session-scoped grants |
+| `mcp/audit.js` | canonical hashing, append-only writer |
+| `models/AuditEvent.js` | the immutable collection |
+| `mcp/tools/*.js` | all nine tools |
+| `routes/mcp.routes.js` | `/tools`, `/audit`, `/grants`, `/status` |
+| `mcp/stdio.js`, `mcp/transport.js` | external MCP clients |
+
+### withGuards — the ordering is the architecture
+
+```
+permission → audit(started) → schema validation → egress guard → handler
+           → audit(ok | denied | error | blocked_ssrf)   [ALWAYS, even on throw]
+```
+
+Permission precedes validation deliberately: a caller who may not touch a host is refused without
+us parsing their payload, and the denial is audited even when the payload was garbage. The final
+write sits in a `finally`, which is what makes **audit-count == tool-call-count** a tested fact.
+
+### Risk classes
+
+| Class | Default |
+|---|---|
+| `local.compute` | auto-granted — no network to consent to |
+| `network.read` | per host |
+| `network.probe` | per host, per session, **never auto-granted** |
+| `deploy.write` | explicit grant **and** per-action confirmation |
+
+Grants are per risk class and per host, not per tool: approving nine tools individually is theatre,
+approving "this app may send attack-indicator payloads to api.example.com" is a real decision. They
+live in memory and expire — a grant outliving its session is the "unaccountable automation" problem
+in `docs/01_PRD.md` §2.
+
+### Schemas are generated, never hand-written
+
+`/api/mcp/tools` runs `z.toJSONSchema()` on every request with `io: 'input'`, so a defaulted field
+is not reported as required and the published schema cannot drift from the validator that runs.
+
+### Two bugs the tests caught
+
+- **`GrantStore.check` used `.find()`**, taking the *first* matching grant. A later confirmation
+  therefore never took effect — and worse, a later **downgrade** never did either, so a confirmed
+  `deploy.write` outlived the decision to withdraw it. Latest grant now wins, in both directions.
+- **Append-only hooks used a `next`-style callback.** Mongoose 7+ treats `updateOne`/`deleteOne` as
+  both document *and* query middleware with different signatures, so some threw "next is not a
+  function" instead of blocking — an append-only guard that blocked three of eight mutation paths.
+  Registered explicitly as query middleware with an async throw.
+
+### Honest stubs
+
+The five `probe_*` tools and `deploy_service` return `{ notImplemented: true }`. Their registry
+entry, risk class, schemas, permission gate and audit behaviour are real now; only detection logic
+is outstanding (Phases 8 and 13). `docs/01_PRD.md` F5: *"Do not ship a third mock."*
+
+### Deviations
+
+**V9 · Auth rate limiter disabled under `NODE_ENV=test`.** A suite legitimately registers dozens of
+users and a shared 20-per-15-minutes budget made results depend on how many tests ran before. The
+limiter is unchanged in every other environment.
+
+**V10 · CI uses a MongoDB service container.** `mongodb-memory-server` downloads a mongod binary on
+first use; that caches on a developer machine but is a network download on the critical path of
+every CI build, and it made the first three runs fail while the identical suite passed locally.
+`tests/helpers/mongo.js` uses `MONGO_TEST_URI` when set and falls back to `mongodb-memory-server`
+otherwise — deterministic in CI, zero setup locally.
+
+### Not done / carried forward
+
+- **CI has not been confirmed green on a runner.** The fix was verified locally on both database
+  paths (154 tests each), but the GitHub API rate limit blocked confirmation. **Check the Actions
+  tab.**
+- Phases 0–5 complete means the master prompt's "Must" tier is cleared: *"The core claim is true.
+  Defensible project."*
