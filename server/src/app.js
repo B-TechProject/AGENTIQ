@@ -21,16 +21,16 @@ import authRoutes from './routes/auth.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import mcpRoutes from './routes/mcp.routes.js';
 
-// Sem 6 feature routes, carried onto the new foundation rather than dropped.
-// Their handlers still contain the defects catalogued in docs/00_SEM6_AUDIT.md
-// and are rewritten in Phases 5-9; keeping them wired means the app does not
-// regress in capability while the foundation is rebuilt underneath it.
-import aiRoutes from './routes/ai.routes.js';
-import analyzeRoutes from './routes/analyze.routes.js';
+// Sem 6 routes still awaiting their rewrite.
+//   /api/request  the API client (F8) — works, kept as is
+//   /api/security the Sem 6 scanner — rewritten in Phase 8
+// The Sem 6 testing pipeline (/api/ai, /api/analyze, /api/tests) was RETIRED in
+// Phase 7: POST /api/runs replaces it. Leaving it mounted would have kept
+// Pollinations, the GET+400->200 rewrite and the module-scoped explanation flag
+// reachable in the running app.
 import requestRoutes from './routes/request.routes.js';
 import securityRoutes from './routes/security.routes.js';
-import testRoutes from './routes/test.routes.js';
-import testRunRoutes from './routes/testRun.routes.js';
+import runsRoutes from './routes/runs.routes.js';
 
 export function createApp({ logging = env.NODE_ENV !== 'test' } = {}) {
   const app = express();
@@ -83,12 +83,9 @@ export function createApp({ logging = env.NODE_ENV !== 'test' } = {}) {
   app.use('/api/auth', authLimiter, authRoutes);
   app.use('/api/mcp', mcpRoutes);
 
-  app.use('/api/ai', aiRoutes);
-  app.use('/api/analyze', analyzeRoutes);
   app.use('/api/request', requestRoutes);
   app.use('/api/security', securityRoutes);
-  app.use('/api/tests', testRoutes);
-  app.use('/api/runs', testRunRoutes);
+  app.use('/api/runs', runsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
