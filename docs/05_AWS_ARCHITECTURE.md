@@ -97,9 +97,35 @@ Added to `.env.example`. All optional — **absence must not break boot**, same 
 AWS_REGION=ap-south-1
 AWS_S3_BUCKET=                  # specs + evaluation artifacts
 AWS_SECRETS_ID=                 # Secrets Manager secret id; falls back to .env when unset
-BEDROCK_MODEL_ID=               # e.g. anthropic.claude-3-5-haiku-20241022-v1:0
+BEDROCK_MODEL_ID=global.anthropic.claude-haiku-4-5-20251001-v1:0
 LLM_PRIMARY=groq                # groq | gemini | bedrock
 ```
+
+### Bedrock requires an *inference profile*, not a bare model id
+
+Verified 17 Aug 2026 against the real account. Invoking the bare model id fails:
+
+```
+ValidationException: Invocation of model ID anthropic.claude-haiku-4-5-20251001-v1:0
+with on-demand throughput isn't supported. Retry your request with the ID or ARN of
+an inference profile that contains this model.
+```
+
+Newer Bedrock models are only reachable through a regional or global **inference profile**, whose id
+carries a prefix (`global.`, `apac.`, `us.`). The Bedrock adapter in Phase 7 must therefore treat
+`BEDROCK_MODEL_ID` as a profile id, and the setup guide must say so — this error is otherwise a very
+confusing first thing to hit.
+
+List what is actually invokable:
+
+```bash
+aws bedrock list-inference-profiles --region ap-south-1 \
+  --query "inferenceProfileSummaries[?status=='ACTIVE'].inferenceProfileId" --output text
+```
+
+> **Region note:** `ap-south-1` (Mumbai) carries a *richer* Claude catalogue than `us-east-1`
+> — Haiku 4.5, Sonnet 5 and Opus 5 versus Haiku-only in us-east-1 — and is closest to Jaipur.
+> Mumbai for everything is the right call; there is no need to split regions.
 
 **Credentials are never put in `.env` in production.** Locally, the default credential chain picks up
 `~/.aws/credentials`. On App Runner, an instance role supplies them. In CI, OIDC does. There is no
