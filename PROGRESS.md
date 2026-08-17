@@ -281,3 +281,43 @@ Q3 (Node 22) ✅ resolved — fnm 22.23.2 active.
 Q4 (branch deletion) ✅ resolved — both deleted.
 Q5 (push access) ✅ resolved — `credential.helper=osxkeychain` with a stored GitHub credential; push
 works. Code is pushed at phase boundaries; secret *values* never are.
+
+---
+
+## Housekeeping — naming and archive isolation · 17 Aug 2026
+
+Triggered by the IDE displaying the workspace as `Autonomous-ASD` after Phase 2.
+
+### Cause
+
+Two things, neither of them the working folder (which was always `AgenticIQ`):
+
+1. **Stale IDE cache.** The workspace name was resolved from the remote URL at session start, ~20
+   minutes before the Phase 2 repoint to `AGENTIQ.git`. Fixed by reloading the IDE window.
+2. **Two live nested git repos inside `_archive/`** — `_archive/Autonomous-ASD/` and `_archive/BTP2/`
+   both still had `origin = Autonomous-ASD.git`. Beyond the cosmetic label this was a real hazard: a
+   `git push` run from inside either directory would have targeted the old repository.
+
+### Action
+
+**Archived repos neutralised.** `_archive/Autonomous-ASD/.git` and `_archive/BTP2/.git` renamed to
+`.git.disabled`. Nothing deleted; fully reversible with
+`mv _archive/BTP2/.git.disabled _archive/BTP2/.git`. Verified: zero live `.git` directories remain
+under `_archive/`, and git commands run inside those folders now resolve to the parent repo.
+
+**Canonical name decided: `AGENTIQ`** (Adarsh, 17 Aug 2026). The project had been spelled four ways —
+`AgentIQ` in the docs, `AGENTIQ` on GitHub, `AgenticIQ` as the local folder, `agentiq-workspace` in
+`package.json`.
+
+| Target | Change |
+|---|---|
+| `package.json` names | `backend` → `agentiq-backend`, `frontend` → `agentiq-frontend`; description on root. `private: true` added to backend, which lacked it. |
+| Local folder | `AgenticIQ` → `AGENTIQ` |
+| GitHub repo | already `AGENTIQ` — no change needed |
+| Spec-doc prose | **unchanged** — the docs say "AgentIQ" as the product name in prose, which reads naturally. Only identifiers were aligned. |
+
+> **npm constraint:** package `name` fields cannot contain uppercase letters, so they use the
+> lowercase `agentiq-*` form. `AGENTIQ` is the display name and repository name only.
+
+Phase 3 renames these directories to `server/` and `web/` per `docs/02_TRD.md` §4; the package names
+move with them then.
