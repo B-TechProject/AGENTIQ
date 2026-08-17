@@ -1,93 +1,154 @@
-// ─── Auth ────────────────────────────────────────────────────────────────────
+/**
+ * Shared API types.
+ *
+ * Mirrors the server's response shapes (docs/02_TRD.md §9). Kept hand-written
+ * rather than generated: the surface is small, and a generator would be another
+ * build step to explain in a viva.
+ */
+
+export type Severity = 'critical' | 'high' | 'medium' | 'low';
+export type RiskClass = 'local.compute' | 'network.read' | 'network.probe' | 'deploy.write';
+export type AuditOutcome = 'ok' | 'denied' | 'error' | 'blocked_ssrf' | 'rate_limited';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
+
+export type RunState =
+  | 'DRAFT' | 'AWAITING_GRANT' | 'CANCELLED'
+  | 'GENERATING' | 'GEN_FAILED'
+  | 'EXECUTING' | 'EXEC_FAILED'
+  | 'SCANNING' | 'EXPLAINING' | 'COMPLETE';
+
 export interface User {
-  id: string
-  name: string
-  email: string
-  plan: 'free' | 'pro' | 'enterprise'
-  avatar?: string
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl?: string;
+  role: 'user' | 'admin';
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
-export type TestType   = 'functional' | 'security' | 'edge'
-export type TestStatus = 'pass' | 'fail'
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
-
-export interface GeneratedTest {
-  name: string
-  description: string
-  assertion: string
-  type: TestType
+export interface AssertionResult {
+  kind: string;
+  expected: string;
+  actual: string;
+  pass: boolean;
 }
 
-export interface TestResult {
-  name: string
-  status: TestStatus
-  responseTime?: number
-  assertions?: string
-  explanation?: string
+export interface FunctionalResult {
+  name: string;
+  intent?: string;
+  category?: 'positive' | 'negative' | 'boundary';
+  status: 'pass' | 'fail' | 'error';
+  httpStatus: number | null;
+  responseTimeMs: number;
+  assertions: AssertionResult[];
+  error?: string | null;
+  explanation?: string;
 }
 
-export interface SecurityResult {
-  name: string
-  vulnerable: boolean
-  reason: string
-  severity?: 'critical' | 'high' | 'medium' | 'low'
+export interface Finding {
+  family: string;
+  owasp: string;
+  severity: Severity;
+  vulnerable: boolean;
+  payload: string | null;
+  signal: string | null;
+  baseline: string | null;
+  explanation: string;
+  remediation: string;
 }
 
 export interface RunSummary {
-  totalTests: number
-  passed: number
-  failed: number
-  vulnerabilities: number
+  totalTests: number;
+  passed: number;
+  failed: number;
+  errored: number;
+  discarded: number;
+  assertionsEvaluated: number;
+  findings: { critical: number; high: number; medium: number; low: number };
 }
 
-export interface RunData {
-  generatedTests: GeneratedTest[]
-  result: {
-    summary: RunSummary
-    functional: TestResult[]
-    security: SecurityResult[]
-  }
+export interface TestRun {
+  id: string;
+  _id: string;
+  state: RunState;
+  stateHistory: { state: RunState; at: string; note?: string }[];
+  target: { url: string; method: HttpMethod; description: string; intendedPublic: boolean };
+  grounded: boolean;
+  summary: RunSummary;
+  functional: FunctionalResult[];
+  security: Finding[];
+  generation?: {
+    provider?: string; model?: string;
+    inputTokens: number; outputTokens: number;
+    costUsd?: number; attempts?: number; generationMs?: number;
+  };
+  error?: { code: string; message: string };
+  startedAt: string;
+  finishedAt?: string;
+  durationMs: number | null;
 }
 
-// ─── History ─────────────────────────────────────────────────────────────────
-export interface HistoryRun {
-  id: string
-  date: string
-  url: string
-  method: HttpMethod
-  status: TestStatus
-  totalTests: number
-  duration: string
-  summary?: RunSummary
+export interface McpTool {
+  name: string;
+  title: string;
+  description: string;
+  riskClass: RiskClass;
+  riskClassMeta: {
+    label: string; description: string;
+    autoGranted: boolean; requiresHost: boolean; requiresConfirmation: boolean;
+  };
+  inputSchema: Record<string, unknown> | null;
+  outputSchema: Record<string, unknown> | null;
 }
 
-// ─── Security Scan ────────────────────────────────────────────────────────────
-export interface ScanResult {
-  vulnerabilities: (SecurityResult & { severity: string })[]
-  score: number
-  endpointsScanned: number
+export interface AuditEvent {
+  _id: string;
+  tool: string;
+  riskClass: RiskClass;
+  targetHost: string | null;
+  inputHash: string;
+  outcome: AuditOutcome;
+  errorCode: string | null;
+  reason: string | null;
+  durationMs: number;
+  ts: string;
+  runId: string | null;
 }
 
-// ─── Deployment ──────────────────────────────────────────────────────────────
-export type DeployPlatform = 'render' | 'railway'
-
-export interface Deployment {
-  id: string
-  host: string
-  platform: DeployPlatform
-  commit: string
-  ago: string
-  checks: string
-  status: 'live' | 'warning' | 'failed'
+export interface Grant {
+  riskClass: RiskClass;
+  host: string | null;
+  confirmed: boolean;
+  grantedAt: number;
+  expiresAt: number;
 }
 
-// ─── Agent ───────────────────────────────────────────────────────────────────
-export interface Agent {
-  name: string
-  icon: string
-  status: string
-  pct: number
-  color: string
-  badge: 'green' | 'orange' | 'red' | 'gray'
+export interface SpecOperation {
+  operationId: string | null;
+  method: HttpMethod;
+  path: string;
+  summary: string | null;
+  parameters: { name: string; in: string; required: boolean }[];
+  responses: { status: string; description: string | null }[];
+  security: string[];
+}
+
+export interface ApiSpec {
+  _id: string;
+  title: string;
+  version: string;
+  openapi: string;
+  sourceUrl: string | null;
+  operationCount: number;
+  operations: SpecOperation[];
+  securitySchemes: { name: string; type: string; scheme: string | null }[];
+  createdAt: string;
+}
+
+export interface HealthStatus {
+  status: 'ok' | 'degraded';
+  uptime: number;
+  mongo: string;
+  llmProviders: { name: string; configured: boolean; role: string }[];
+  googleOAuth: string;
+  env: string;
 }

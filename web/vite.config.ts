@@ -1,21 +1,22 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+import path from 'node:path';
 
+/**
+ * Tailwind v4 is CSS-first: it is a VITE PLUGIN, and there is no
+ * tailwind.config.js and no postcss.config.js. Design tokens live in
+ * src/index.css under @theme. See docs/02_TRD.md §3.
+ */
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+    alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
   server: {
     port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-    },
+    // The API base URL is read from VITE_API_URL at runtime (services/api.ts).
+    // Sem 6 declared that variable and then hardcoded localhost:3001, which is
+    // why the app could not be deployed.
   },
-})
+});

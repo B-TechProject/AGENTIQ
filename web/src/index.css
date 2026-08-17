@@ -1,243 +1,169 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/**
+ * AGENTIQ design tokens.
+ *
+ * Tailwind v4 is CSS-first: there is NO tailwind.config.js and NO
+ * postcss.config.js. Tokens declared in @theme generate utilities
+ * automatically — `--color-primary` gives you `bg-primary`, `text-primary`,
+ * `border-primary`. See docs/02_TRD.md §3 and docs/04_App_UI.md §2.
+ *
+ * Fonts are self-hosted via @fontsource: a CDN that is slow or blocked during
+ * a viva would reflow the entire interface mid-demo.
+ */
+@import "tailwindcss";
+
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+
+@theme {
+  /* Brand — deep, sober blue. Chrome, primary actions, active nav. */
+  --color-primary:      #1B4D89;
+  --color-primary-700:  #143A68;
+  --color-primary-50:   #EDF3FA;
+
+  /* Interactive — links, focus, selected */
+  --color-accent:       #2563C9;
+  --color-accent-50:    #EAF1FC;
+
+  /* Surfaces */
+  --color-surface:      #FFFFFF;   /* cards, panels */
+  --color-surface-2:    #F6F8FB;   /* app background */
+  --color-surface-3:    #EDF1F7;   /* wells, table headers, code blocks */
+  --color-line:         #DDE4ED;   /* borders, dividers */
+
+  /* Text */
+  --color-ink:          #131A24;
+  --color-ink-muted:    #5A6779;
+  --color-ink-subtle:   #8A94A3;
+
+  /* Semantic — findings, verdicts, status. Use ONLY for meaning. */
+  --color-success:      #17794A;
+  --color-success-50:   #E8F5EE;
+  --color-warning:      #B5730B;
+  --color-warning-50:   #FDF3E3;
+  --color-danger:       #C0392B;
+  --color-danger-50:    #FBEDEB;
+  --color-info:         #2563C9;
+  --color-info-50:      #EAF1FC;
+
+  /* Severity — findings only */
+  --color-sev-critical: #8E1F16;
+  --color-sev-high:     #C0392B;
+  --color-sev-medium:   #B5730B;
+  --color-sev-low:      #5A6779;
+
+  /* HTTP methods — chips only, never backgrounds */
+  --color-method-get:    #17794A;
+  --color-method-post:   #2563C9;
+  --color-method-put:    #B5730B;
+  --color-method-patch:  #6B3FA0;
+  --color-method-delete: #C0392B;
+
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-card: 8px;
+  --radius-ctl:  6px;
+
+  --shadow-card:  0 1px 2px rgba(19, 26, 36, .06);
+  --shadow-hover: 0 4px 12px rgba(19, 26, 36, .10);
+  --shadow-pop:   0 8px 28px rgba(19, 26, 36, .14);
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
 
 @layer base {
-  * {
-    box-sizing: border-box;
-  }
-
-  html, body, #root {
-    height: 100%;
+  html {
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
-    font-family: 'Syne', sans-serif;
-    background-color: #050d1a;
-    color: #e2e8f0;
+    background: var(--color-surface-2);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
   }
 
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  /**
+   * Every metric, duration, count and status code.
+   * Without tabular-nums, KPI cards jitter as numbers change and live progress
+   * rows visibly twitch — docs/04_App_UI.md §3.
+   */
+  .tabular,
+  code, kbd, samp, pre,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
   }
-  ::-webkit-scrollbar-track {
-    background: #050d1a;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #1a3050;
+
+  code, kbd, samp, pre { font-family: var(--font-mono); }
+
+  /* Visible focus everywhere. NEVER outline:none — docs/04_App_UI.md §8. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
     border-radius: 3px;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #1e3d60;
+
+  ::selection {
+    background: var(--color-accent-50);
   }
 
-  input, select, textarea {
-    font-family: 'Syne', sans-serif;
+  /* docs/04_App_UI.md §4 — respect the user's motion preference. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
+/* ── Component shorthands ─────────────────────────────────────────────────── */
+
 @layer components {
-  .grid-bg {
-    background-image: linear-gradient(rgba(0,212,170,0.04) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(0,212,170,0.04) 1px, transparent 1px);
-    background-size: 40px 40px;
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
   }
 
-  .card-glass {
-    background: rgba(10,22,40,0.8);
-    backdrop-filter: blur(12px);
-    border: 1px solid #1a3050;
-    border-radius: 16px;
+  /** docs/04_App_UI.md §3 — the type scale, as classes. */
+  .t-display { font-size: 28px; font-weight: 600; line-height: 1.25; }
+  .t-h1      { font-size: 22px; font-weight: 600; line-height: 1.3; }
+  .t-h2      { font-size: 17px; font-weight: 600; line-height: 1.35; }
+  .t-h3      { font-size: 15px; font-weight: 600; line-height: 1.4; }
+  .t-body    { font-size: 14px; font-weight: 400; line-height: 1.55; }
+  .t-small   { font-size: 12.5px; font-weight: 400; line-height: 1.45; }
+  .t-label   {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--color-ink-muted);
+  }
+  .t-mono    { font-family: var(--font-mono); font-size: 13px; font-weight: 450; }
+  .t-mono-block {
+    font-family: var(--font-mono); font-size: 12.5px; font-weight: 400; line-height: 1.6;
   }
 
-  .glow-teal {
-    box-shadow: 0 0 30px rgba(0,212,170,0.08), inset 0 0 30px rgba(0,212,170,0.03);
+  /** Skeletons, not spinners — docs/04_App_UI.md §4. */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--color-surface-3) 25%,
+      var(--color-line) 37%,
+      var(--color-surface-3) 63%
+    );
+    background-size: 400% 100%;
+    animation: skeleton-shimmer 1.4s ease infinite;
+    border-radius: 4px;
   }
 
-  .text-gradient {
-    background: linear-gradient(135deg, #00d4aa, #a855f7);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .btn-primary {
-    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-sm font-semibold text-sm cursor-pointer transition-all duration-200;
-    background: linear-gradient(135deg, #00d4aa, #00b890);
-    color: #000;
-    box-shadow: 0 4px 20px rgba(0,212,170,0.3);
-  }
-  .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 28px rgba(0,212,170,0.4);
-  }
-  .btn-primary:active { transform: translateY(0); }
-  .btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .btn-orange {
-    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-sm font-semibold text-sm text-white cursor-pointer transition-all duration-200;
-    background: linear-gradient(135deg, #f97316, #ea6a0a);
-    box-shadow: 0 4px 20px rgba(249,115,22,0.3);
-  }
-  .btn-orange:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 28px rgba(249,115,22,0.4);
-  }
-  .btn-orange:active { transform: translateY(0); }
-  .btn-orange:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .btn-ghost {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-sm font-semibold text-sm cursor-pointer transition-all duration-200;
-    background: #0d1a2e;
-    color: #94a3b8;
-    border: 1px solid #1a3050;
-  }
-  .btn-ghost:hover {
-    border-color: #1e3d60;
-    color: #e2e8f0;
-  }
-
-  .btn-danger {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-sm font-semibold text-sm cursor-pointer transition-all duration-200;
-    background: rgba(239,68,68,0.12);
-    color: #ef4444;
-    border: 1px solid rgba(239,68,68,0.3);
-  }
-  .btn-danger:hover {
-    background: rgba(239,68,68,0.2);
-  }
-
-  .badge {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono;
-    border: 1px solid;
-  }
-  .badge-teal   { background: rgba(0,212,170,0.12);  color: #00d4aa; border-color: rgba(0,212,170,0.3); }
-  .badge-green  { background: rgba(34,197,94,0.12);  color: #22c55e; border-color: rgba(34,197,94,0.3); }
-  .badge-orange { background: rgba(249,115,22,0.12); color: #f97316; border-color: rgba(249,115,22,0.3); }
-  .badge-red    { background: rgba(239,68,68,0.12);  color: #ef4444; border-color: rgba(239,68,68,0.3); }
-  .badge-purple { background: rgba(168,85,247,0.12); color: #a855f7; border-color: rgba(168,85,247,0.3); }
-  .badge-blue   { background: rgba(59,130,246,0.12); color: #3b82f6; border-color: rgba(59,130,246,0.3); }
-  .badge-gray   { background: rgba(100,116,139,0.12); color: #94a3b8; border-color: rgba(100,116,139,0.3); }
-
-  .input-field {
-    @apply w-full px-3.5 py-2.5 rounded-sm text-sm text-text-primary outline-none transition-all duration-200;
-    background: #091221;
-    border: 1px solid #1a3050;
-    font-family: 'Syne', sans-serif;
-  }
-  .input-field::placeholder { color: #64748b; }
-  .input-field:focus {
-    border-color: #00d4aa;
-    box-shadow: 0 0 0 3px rgba(0,212,170,0.1);
-  }
-  .input-field:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .input-label {
-    @apply block text-xs font-mono text-text-secondary mb-1.5;
-  }
-
-  .section-title {
-    @apply text-base font-bold flex items-center gap-2;
-  }
-  .section-title::before {
-    content: '';
-    display: inline-block;
-    width: 3px;
-    height: 16px;
-    background: linear-gradient(#00d4aa, #a855f7);
-    border-radius: 2px;
-  }
-
-  .stat-card {
-    @apply relative overflow-hidden p-5;
-    background: #0a1628;
-    border: 1px solid #1a3050;
-    border-radius: 16px;
-    transition: all 0.25s;
-  }
-  .stat-card:hover {
-    border-color: #1e3d60;
-    box-shadow: 0 0 24px rgba(0,212,170,0.06);
-  }
-
-  .pipeline-step {
-    @apply flex-1 text-center py-3 px-4 relative;
-    background: #0f1e35;
-    border: 1px solid #1a3050;
-    transition: all 0.2s;
-  }
-  .pipeline-step.active {
-    border-color: rgba(0,212,170,0.4);
-    background: rgba(0,212,170,0.06);
-  }
-  .pipeline-step.done {
-    border-color: rgba(34,197,94,0.3);
-    background: rgba(34,197,94,0.05);
-  }
-  .pipeline-step.warning {
-    border-color: rgba(249,115,22,0.3);
-    background: rgba(249,115,22,0.05);
-  }
-  .pipeline-step:first-child { border-radius: 8px 0 0 8px; }
-  .pipeline-step:last-child  { border-radius: 0 8px 8px 0; }
-  .pipeline-step:not(:last-child)::after {
-    content: '›';
-    position: absolute;
-    right: -9px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #64748b;
-    z-index: 1;
-    font-size: 16px;
-  }
-
-  .result-row {
-    @apply flex items-start gap-3 px-4 py-3.5 transition-colors duration-150;
-    border-bottom: 1px solid #1a3050;
-  }
-  .result-row:hover { background: rgba(255,255,255,0.02); }
-  .result-row:last-child { border-bottom: none; }
-
-  .vuln-card {
-    @apply flex items-start gap-4 p-4 rounded transition-all duration-200;
-    border: 1px solid;
-  }
-  .vuln-safe   { background: rgba(34,197,94,0.08);  border-color: rgba(34,197,94,0.25); }
-  .vuln-danger { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.25); }
-  .vuln-warn   { background: rgba(249,115,22,0.08); border-color: rgba(249,115,22,0.25); }
-
-  .table-row { @apply transition-colors duration-150; }
-  .table-row:hover td { background: rgba(255,255,255,0.02); }
-
-  @keyframes pulse-status {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.4; }
-  }
-  .pulse-dot { animation: pulse-status 2s infinite; }
-
-  @keyframes rotate-spin {
-    to { transform: rotate(360deg); }
-  }
-  .spinner {
-    width: 16px; height: 16px;
-    border: 2px solid #1e3d60;
-    border-top-color: #00d4aa;
-    border-radius: 50%;
-    animation: rotate-spin 0.8s linear infinite;
-    flex-shrink: 0;
+  @keyframes skeleton-shimmer {
+    0%   { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
   }
 }

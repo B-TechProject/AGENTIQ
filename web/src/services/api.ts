@@ -1,195 +1,122 @@
-import axios, { AxiosError } from 'axios'
+/**
+ * The API client.
+ *
+ * ⚠️ THE BASE URL IS READ FROM THE ENVIRONMENT.
+ *
+ * Sem 6 declared VITE_API_URL in .env.example and then wrote
+ * `baseURL: 'http://localhost:3001/api'` in this exact file. That single line
+ * is why the app could not be deployed anywhere: every build, on every host,
+ * called the developer's laptop. There is a test asserting no localhost literal
+ * appears here.
+ */
+import axios, { AxiosError } from 'axios';
 
-// ── Axios Instance ──────────────────────────────────────────────────────────
-export const api = axios.create({
-  baseURL: 'http://localhost:3001/api',
+/** Falls back to localhost ONLY for local development convenience. */
+export const API_BASE_URL: string =
+  import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api';
+
+/** The single response envelope — docs/02_TRD.md §10. */
+export interface ApiSuccess<T> { success: true; data: T }
+export interface ApiFailure {
+  success: false;
+  error: { code: string; message: string; details?: unknown };
+}
+
+export class ApiError extends Error {
+  readonly code: string;
+  readonly status: number;
+  readonly details?: unknown;
+
+  constructor(status: number, code: string, message: string, details?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+}
+
+export const http = axios.create({
+  baseURL: API_BASE_URL,
   withCredentials: true,
-  headers: { 'Content-Type': 'application/json' },
-  timeout: 30_000,
-})
+  timeout: 60_000,
+});
 
-// Attach auth token if present
-api.interceptors.request.use((config) => {
-  const raw = localStorage.getItem('agentiq-auth')
-  if (raw) {
-    try {
-      const { state } = JSON.parse(raw)
-      if (state?.token) {
-        config.headers.Authorization = `Bearer ${state.token}`
-      }
-    } catch {
-      // ignore
+/** Attaches the bearer token. Read lazily so a fresh login takes effect at once. */
+let authToken: string | null = null;
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+export function getAuthToken() {
+  return authToken;
+}
+
+http.interceptors.request.use((config) => {
+  if (authToken) config.headers.Authorization = `Bearer ${authToken}`;
+  // The permission sheet grants are scoped per session, so every request
+  // carries the session id the grants were recorded against.
+  const sessionId = sessionStorage.getItem('agentiq-session-id');
+  if (sessionId) config.headers['x-session-id'] = sessionId;
+  return config;
+});
+
+/** Handlers registered by the app for cross-cutting responses. */
+type UnauthorizedHandler = () => void;
+let onUnauthorized: UnauthorizedHandler | null = null;
+export function setUnauthorizedHandler(fn: UnauthorizedHandler | null) {
+  onUnauthorized = fn;
+}
+
+http.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<ApiFailure>) => {
+    // docs/03_App_Flow.md A2: 401 clears auth, redirects to login, toasts
+    // "Session expired".
+    if (error.response?.status === 401) onUnauthorized?.();
+
+    const payload = error.response?.data;
+    if (payload && payload.success === false) {
+      return Promise.reject(new ApiError(
+        error.response!.status,
+        payload.error.code,
+        payload.error.message,
+        payload.error.details,
+      ));
     }
+
+    // Network failure, timeout, or a non-envelope response.
+    return Promise.reject(new ApiError(
+      error.response?.status ?? 0,
+      error.code === 'ECONNABORTED' ? 'TIMEOUT' : 'NETWORK_ERROR',
+      error.response?.status
+        ? `The server returned ${error.response.status}.`
+        : 'Could not reach the server. Is it running?',
+    ));
+  },
+);
+
+/** Unwraps the { success, data } envelope so callers deal in plain data. */
+export async function apiGet<T>(url: string, params?: Record<string, unknown>): Promise<T> {
+  const { data } = await http.get<ApiSuccess<T>>(url, { params });
+  return data.data;
+}
+
+export async function apiPost<T>(url: string, body?: unknown): Promise<T> {
+  const { data } = await http.post<ApiSuccess<T>>(url, body);
+  return data.data;
+}
+
+export async function apiDelete<T>(url: string, body?: unknown): Promise<T> {
+  const { data } = await http.delete<ApiSuccess<T>>(url, { data: body });
+  return data.data;
+}
+
+/** A stable session id, so grants persist across a page reload but not a tab close. */
+export function ensureSessionId(): string {
+  let id = sessionStorage.getItem('agentiq-session-id');
+  if (!id) {
+    id = crypto.randomUUID();
+    sessionStorage.setItem('agentiq-session-id', id);
   }
-  return config
-})
-
-// Global error handler
-api.interceptors.response.use(
-  (res) => res,
-  (err: AxiosError) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('agentiq-auth')
-      window.location.href = '/login'
-    }
-    return Promise.reject(err)
-  }
-)
-
-// ── Types ───────────────────────────────────────────────────────────────────
-export interface GeneratePayload {
-  url: string
-  method: string
-  description: string
+  return id;
 }
-
-export interface GeneratedTest {
-  name: string
-  description?: string
-
-  method: string
-  url: string
-  body?: any
-  params?: Record<string, any>
-
-  assertions: {
-    check: string
-    expected: number | string
-    actual: number | string | null
-    pass: boolean
-  }
-}
-export interface AssertionObject {
-  check: string
-  expected: number | string
-  actual: number | string | null
-  pass: boolean
-}
-
-export interface TestResult {
-  name: string
-  status: 'pass' | 'fail'
-  responseTime?: number
-  assertions?: string | AssertionObject
-  explanation?: string
-}
-
-export interface SecurityResult {
-  name: string
-  vulnerable: boolean
-  reason: string
-  severity?: 'critical' | 'high' | 'medium' | 'low'
-}
-
-export interface RunSummary {
-  totalTests: number
-  passed: number
-  failed: number
-  vulnerabilities: number
-}
-
-export interface RunData {
-  generatedTests: GeneratedTest[]
-  result: {
-    summary: RunSummary
-    functional: TestResult[]
-    security: SecurityResult[]
-  }
-}
-
-export interface HistoryRun {
-  id: string
-  date: string
-  url: string
-  method: string
-  status: 'pass' | 'fail'
-  totalTests: number
-  duration: string
-  summary?: RunSummary
-}
-
-export interface CustomRequestPayload {
-  url: string
-  method: string
-  headers?: Record<string, string>
-  params?: Record<string, string>
-  body?: any
-}
-
-export interface CustomResponseData {
-  status: number
-  headers: Record<string, string>
-  data: any
-  time: number
-}
-
-
-// ── Helper ───────────────────────────────────────────────────────────────────
-const measureRequest = async (requestFn: () => Promise<any>): Promise<CustomResponseData> => {
-  const start = Date.now()
-  try {
-    const response = await requestFn()
-    return {
-      status: response.status,
-      headers: response.headers,
-      data: response.data,
-      time: Date.now() - start
-    }
-  } catch (error: any) {
-    if (error.response) {
-      // Return HTTP failure responses instead of throwing, precisely like Postman!
-      return {
-        status: error.response.status,
-        headers: error.response.headers,
-        data: error.response.data,
-        time: Date.now() - start
-      }
-    }
-    throw error
-  }
-}
-
-// ── API Functions ────────────────────────────────────────────────────────────
-export const apiService = {
-  generate: async (payload: GeneratePayload): Promise<CustomResponseData> => {
-    return measureRequest(() => api.post('/ai/generate', payload))
-  },
-
-  run: async (payload: GeneratePayload): Promise<CustomResponseData> => {
-    return measureRequest(() => api.post('/ai/run', payload))
-  },
-
-  securityScan: async (payload: { url: string }): Promise<CustomResponseData> => {
-    return measureRequest(() => api.post('/security/scan', payload))
-  },
-
-  getHistory: async (): Promise<CustomResponseData> => {
-    return measureRequest(() => api.get('/runs'))
-  },
-
-  getRunById: async (id: string): Promise<CustomResponseData> => {
-    return measureRequest(() => api.get(`/runs/${id}`))
-  },
-
-
-  login: async (email: string, password: string) => {
-    const { data } = await api.post('/auth/login', { email, password })
-    return data
-  },
-
-  signup: async (name: string, email: string, password: string , confirmPassword: string) => {
-    const { data } = await api.post('/auth/register', { name, email, password , confirmPassword})
-    return data
-  },
-
-  deploy: async (repo: string, platform: string, branch: string) => {
-    const { data } = await api.post('/deploy', { repo, platform, branch })
-    return data
-  },
-
-  sendRequest: async (payload: CustomRequestPayload): Promise<CustomResponseData> => {
-    const { data } = await api.post('/request/send', payload)
-    return data
-  },
-}
-

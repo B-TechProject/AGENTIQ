@@ -1,28 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2022",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
-
     "moduleResolution": "bundler",
-
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-
     "strict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    // TypeScript 7 REMOVED baseUrl. Paths now resolve relative to this file,
+    // so the mapping works without it.
+    "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src"]
 }
