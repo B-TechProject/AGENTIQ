@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A newer push to the same branch cancels the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: install → lint → typecheck → test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          # Reads .nvmrc so CI and local development cannot drift apart.
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+        env:
+          # The suite must never depend on a real database, a real LLM provider,
+          # or a checked-in .env. tests/setup.js supplies deterministic values;
+          # mongodb-memory-server spawns its own mongod. Nothing here is a secret.
+          NODE_ENV: test
+          CI: 'true'
+
+      - name: Architecture guard summary
+        if: always()
+        run: |
+          echo "### Architecture guard" >> "$GITHUB_STEP_SUMMARY"
+          echo "Agents must perform no I/O — they may only call MCP tools." >> "$GITHUB_STEP_SUMMARY"
+          echo "Enforced by server/tests/architecture.test.js, which fails the" >> "$GITHUB_STEP_SUMMARY"
+          echo "build if axios/fetch/http.request appears under server/src/agents/**." >> "$GITHUB_STEP_SUMMARY"
