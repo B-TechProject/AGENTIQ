@@ -124,22 +124,47 @@ export function parseEnv(source = process.env) {
     : { ok: false, env: null, issues: result.error.issues };
 }
 
-/** Renders the set/missing table printed at boot. Returns an array of lines. */
+/**
+ * The only variables with no default and no fallback. Everything else either
+ * defaults or degrades a single feature, so only these two can read "missing".
+ */
+export const REQUIRED_KEYS = ['MONGO_URI', 'JWT_SECRET'];
+
+/**
+ * Defaults, resolved once by parsing a minimal valid object. Computed rather
+ * than duplicated so the table cannot disagree with the schema.
+ */
+function schemaDefaults() {
+  const probe = envSchema.safeParse({ MONGO_URI: 'mongodb://x/y', JWT_SECRET: 'x'.repeat(32) });
+  return probe.success ? probe.data : {};
+}
+
+/** Renders the set/default/missing table printed at boot. Returns lines. */
 export function formatEnvTable(source = process.env, parsed = null) {
   const names = ENV_KEYS;
+  const defaults = schemaDefaults();
   const width = Math.max(...names.map((k) => k.length));
   const lines = [`  ${'VARIABLE'.padEnd(width)}  STATUS    VALUE`];
   lines.push(`  ${'-'.repeat(width)}  --------  -----`);
+
   for (const key of names) {
     const raw = source[key];
     const isSet = raw !== undefined && raw !== '';
-    const effective = parsed ? parsed[key] : raw;
+
+    // Falls back to the schema's own defaults when validation failed, so a
+    // failing boot does not report 18 problems when only two are real.
+    const effective = parsed?.[key] ?? defaults[key];
+
     let status;
     if (isSet) status = 'set';
-    else if (parsed && effective !== undefined) status = 'default';
+    else if (REQUIRED_KEYS.includes(key)) status = 'MISSING';
     else if (key in OPTIONAL_FEATURE_VARS) status = 'off';
-    else status = 'missing';
-    const shown = isSet ? maskValue(key, raw) : status === 'default' ? String(effective) : '';
+    else if (effective !== undefined) status = 'default';
+    else status = 'unset';
+
+    const shown = isSet
+      ? maskValue(key, raw)
+      : status === 'default' ? String(effective) : '';
     lines.push(`  ${key.padEnd(width)}  ${status.padEnd(8)}  ${shown}`);
   }
   return lines;

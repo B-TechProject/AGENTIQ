@@ -118,3 +118,26 @@ describe('ENV_KEYS stays in sync with the schema', () => {
     expect([...ENV_KEYS].sort()).toEqual([...shapeKeys].sort());
   });
 });
+
+describe('the failure table distinguishes required from defaulted', () => {
+  it('marks only the two genuinely required variables as MISSING', async () => {
+    const { formatEnvTable, REQUIRED_KEYS } = await import('../src/config/env.js');
+    // Empty environment: validation fails, but most variables have defaults.
+    const lines = formatEnvTable({}, null);
+    const missing = lines.filter((l) => l.includes('MISSING')).map((l) => l.trim().split(/\s+/)[0]);
+    expect(missing.sort()).toEqual([...REQUIRED_KEYS].sort());
+  });
+
+  it('shows defaulted variables with their default value, not as missing', () => {
+    const lines = formatEnvTable({}, null).join('\n');
+    expect(lines).toMatch(/NODE_ENV\s+default\s+development/);
+    expect(lines).toMatch(/PORT\s+default\s+3001/);
+    expect(lines).toMatch(/ALLOW_PRIVATE_TARGETS\s+default\s+false/);
+  });
+
+  it('shows optional feature variables as off rather than missing', () => {
+    const lines = formatEnvTable({}, null).join('\n');
+    expect(lines).toMatch(/GOOGLE_CLIENT_ID\s+off/);
+    expect(lines).toMatch(/RENDER_API_KEY\s+off/);
+  });
+});
