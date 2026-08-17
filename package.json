@@ -1,14 +1,28 @@
 {
   "name": "agentiq-workspace",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "AGENTIQ workspace root",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "workspaces": [
+    "server",
+    "web"
+  ],
   "scripts": {
-    "install:all": "npm install && npm --prefix frontend install && npm --prefix backend install",
-    "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\"",
-    "build": "npm run build --prefix frontend"
+    "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm --workspace server run dev",
+    "dev:web": "npm --workspace web run dev",
+    "build": "npm --workspace web run build",
+    "test": "npm --workspace server run test",
+    "lint": "npm --workspace server run lint",
+    "typecheck": "npm --workspace web run typecheck",
+    "migrate:users": "npm --workspace server run migrate:users",
+    "evaluate": "node evaluation/run.js"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "10.0.5"
   }
 }

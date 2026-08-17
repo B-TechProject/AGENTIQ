@@ -1,0 +1,93 @@
+/**
+ * The Express application — assembled here, never started here.
+ *
+ * Splitting this from index.js is what lets tests do
+ *   `import { app } from '../src/app.js'; await request(app).get('/api/health')`
+ * without binding a port or requiring a live database.
+ */
+import express from 'express';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import pinoHttp from 'pino-http';
+import passport from 'passport';
+
+import { env } from './config/env.js';
+import { configurePassport } from './config/passport.js';
+import { httpLoggerOptions } from './lib/logger.js';
+import { notFound, errorHandler } from './middleware/error.js';
+import authRoutes from './routes/auth.routes.js';
+import healthRoutes from './routes/health.routes.js';
+
+// Sem 6 feature routes, carried onto the new foundation rather than dropped.
+// Their handlers still contain the defects catalogued in docs/00_SEM6_AUDIT.md
+// and are rewritten in Phases 5-9; keeping them wired means the app does not
+// regress in capability while the foundation is rebuilt underneath it.
+import aiRoutes from './routes/ai.routes.js';
+import analyzeRoutes from './routes/analyze.routes.js';
+import requestRoutes from './routes/request.routes.js';
+import securityRoutes from './routes/security.routes.js';
+import testRoutes from './routes/test.routes.js';
+import testRunRoutes from './routes/testRun.routes.js';
+
+export function createApp({ logging = env.NODE_ENV !== 'test' } = {}) {
+  const app = express();
+
+  // Behind Render's proxy; required for correct client IPs, which the rate
+  // limiter keys on. Trust exactly one hop rather than `true` — trusting every
+  // hop lets a client spoof X-Forwarded-For and evade the limiter entirely.
+  app.set('trust proxy', 1);
+  app.disable('x-powered-by');
+
+  app.use(helmet());
+  app.use(
+    cors({
+      // Comma-separated list so a deployed origin and localhost can coexist.
+      origin: env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean),
+      credentials: true,
+    }),
+  );
+
+  if (logging) app.use(pinoHttp(httpLoggerOptions));
+
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: false }));
+  app.use(cookieParser());
+
+  // Registers the Google strategy only if credentials are present (BUG-4).
+  configurePassport();
+  app.use(passport.initialize());
+
+  // docs/02_TRD.md §8. Deliberately not applied to /api/auth/me, which the
+  // frontend polls on every route change.
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    skip: (req) => req.method === 'GET',
+    message: {
+      success: false,
+      error: { code: 'RATE_LIMITED', message: 'Too many attempts. Try again in a few minutes.' },
+    },
+  });
+
+  app.use('/api', healthRoutes);
+  app.use('/api/auth', authLimiter, authRoutes);
+
+  app.use('/api/ai', aiRoutes);
+  app.use('/api/analyze', analyzeRoutes);
+  app.use('/api/request', requestRoutes);
+  app.use('/api/security', securityRoutes);
+  app.use('/api/tests', testRoutes);
+  app.use('/api/runs', testRunRoutes);
+
+  app.use(notFound);
+  app.use(errorHandler);
+
+  return app;
+}
+
+export const app = createApp();
+export default app;
