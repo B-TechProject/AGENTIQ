@@ -7,6 +7,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { startRun, listRuns, getRun } from '../services/run.service.js';
+import { getSpec } from '../services/spec.service.js';
 import { protectRoute } from '../middleware/auth.js';
 import { ok, fail } from '../utils/http.js';
 import { RUN_STATE } from '../models/TestRun.js';
@@ -20,6 +21,8 @@ const startSchema = z.object({
   count: z.coerce.number().int().min(1).max(12).default(4),
   intendedPublic: z.boolean().default(false),
   specRef: z.string().optional(),
+  /** Index into the stored spec's operations — this is what grounds the run. */
+  operationIndex: z.coerce.number().int().min(0).optional(),
 });
 
 /**
@@ -37,13 +40,30 @@ router.post('/', protectRoute, async (req, res) => {
   }
 
   const sessionId = req.get('x-session-id') ?? String(req.user._id);
-  const { url, method, description, count, intendedPublic, specRef } = parsed.data;
+  const { url, method, description, count, intendedPublic, specRef, operationIndex } = parsed.data;
+
+  // Spec grounding (docs/01_PRD.md F4). The operation's declared parameters,
+  // responses and security schemes go into the prompt, so assertions reference
+  // fields the specification actually declares rather than invented ones.
+  let operation = null;
+  if (specRef) {
+    if (!/^[0-9a-f]{24}$/i.test(specRef)) {
+      return fail(res, 400, 'INVALID_ID', 'Not a valid spec id');
+    }
+    const spec = await getSpec({ userId: req.user._id, specId: specRef });
+    if (!spec) return fail(res, 404, 'NOT_FOUND', 'Specification not found');
+    operation = operationIndex !== undefined
+      ? spec.operations[operationIndex] ?? null
+      : spec.operations.find((o) => o.method === method) ?? null;
+    if (!operation) return fail(res, 404, 'NOT_FOUND', 'Operation not found in that specification');
+  }
 
   const run = await startRun({
     userId: req.user._id,
     sessionId,
     target: { url, method, description, intendedPublic },
     count,
+    operation,
     specRef: specRef ?? null,
   });
 

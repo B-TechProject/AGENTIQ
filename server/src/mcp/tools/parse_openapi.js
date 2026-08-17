@@ -10,6 +10,7 @@
  */
 import { z } from 'zod';
 import SwaggerParser from '@apidevtools/swagger-parser';
+import yaml from 'js-yaml';
 import { defineTool } from '../registry.js';
 import { RISK_CLASS } from '../permissions.js';
 
@@ -40,23 +41,53 @@ export const outputSchema = z.object({
   securitySchemes: z.array(z.object({ name: z.string(), type: z.string(), scheme: z.string().nullable() })),
 });
 
-/** YAML or JSON in, object out. Errors name the offending location. */
-function parseDocument(text) {
-  const trimmed = text.trim();
-  if (trimmed.startsWith('{')) {
+/**
+ * YAML or JSON in, object out.
+ *
+ * docs/01_PRD.md F4: "Malformed spec → clear parse error naming the offending
+ * path, not a stack trace." Both parsers expose a line and column; that
+ * information is the difference between a user fixing their file in ten seconds
+ * and giving up.
+ */
+export function parseDocument(text) {
+  const trimmed = String(text).trim();
+  if (!trimmed) {
+    throw Object.assign(new Error('The specification is empty.'), { code: 'SPEC_PARSE_ERROR' });
+  }
+
+  // JSON first when it looks like JSON — its errors are more precise than
+  // YAML's for the same input, and every JSON document is also valid YAML,
+  // so letting YAML handle it would produce a worse message.
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
     try {
       return JSON.parse(trimmed);
     } catch (err) {
-      const err2 = new Error(`Specification is not valid JSON: ${err.message}`);
-      err2.code = 'SPEC_PARSE_ERROR';
-      throw err2;
+      // Node reports "position 412"; a line number is far more actionable.
+      const at = Number(/position (\d+)/.exec(err.message)?.[1] ?? -1);
+      const where = at >= 0
+        ? ` (line ${trimmed.slice(0, at).split('\n').length})`
+        : '';
+      throw Object.assign(
+        new Error(`Specification is not valid JSON${where}: ${err.message}`),
+        { code: 'SPEC_PARSE_ERROR' },
+      );
     }
   }
-  const err = new Error(
-    'Specification does not look like JSON. YAML support arrives with the full ingestion flow in Phase 9.',
-  );
-  err.code = 'SPEC_PARSE_ERROR';
-  throw err;
+
+  try {
+    const parsed = yaml.load(trimmed, { json: true });
+    if (parsed === null || typeof parsed !== 'object') {
+      throw new Error('the document did not parse to an object');
+    }
+    return parsed;
+  } catch (err) {
+    // js-yaml carries a mark with the exact line and column.
+    const mark = err.mark ? ` at line ${err.mark.line + 1}, column ${err.mark.column + 1}` : '';
+    throw Object.assign(
+      new Error(`Specification is not valid YAML${mark}: ${err.reason ?? err.message}`),
+      { code: 'SPEC_PARSE_ERROR' },
+    );
+  }
 }
 
 export function extractOperations(api) {
@@ -106,10 +137,15 @@ export default defineTool({
       // dereference resolves $refs so downstream prompts see real schemas.
       api = await SwaggerParser.dereference(raw);
     } catch (err) {
-      // Name the offending path rather than surfacing a raw stack trace
-      // (docs/01_PRD.md F4 acceptance criterion).
-      const e = new Error(`Could not parse specification: ${err.message}`);
+      // swagger-parser puts the failing JSON pointer in err.path or inside the
+      // message. Surfacing it is the difference between "fix $.paths./pets.get"
+      // and a stack trace the user cannot act on (docs/01_PRD.md F4).
+      const pointer = Array.isArray(err.path) && err.path.length
+        ? ` at $.${err.path.join('.')}`
+        : '';
+      const e = new Error(`Could not parse specification${pointer}: ${err.message}`);
       e.code = 'SPEC_PARSE_ERROR';
+      e.details = { path: err.path ?? null };
       throw e;
     }
 
