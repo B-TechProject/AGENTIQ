@@ -14,6 +14,7 @@ import { describeRegistry, TOOLS } from '../mcp/registry.js';
 import { query as queryAudit } from '../mcp/audit.js';
 import { grantStore, RISK_CLASSES, RISK_CLASS_META } from '../mcp/permissions.js';
 import { protectRoute } from '../middleware/auth.js';
+import { handleMcpRequest } from '../mcp/transport.js';
 import { ok, fail } from '../utils/http.js';
 import { OUTCOMES } from '../models/AuditEvent.js';
 
@@ -112,6 +113,19 @@ router.delete('/grants', protectRoute, (req, res) => {
   });
   return ok(res, { revoked: removed });
 });
+
+/**
+ * ALL /api/mcp — the streamable-HTTP MCP transport (docs/02_TRD.md §5.4).
+ *
+ * Declared LAST so the concrete routes above (/tools, /audit, /grants, /status)
+ * win; Express matches in order, and a router-level catch-all placed first
+ * would swallow them.
+ *
+ * Behind auth. Every tool call arriving here still passes through the same
+ * withGuards() chain as an internal call, because the guards live in the
+ * registry rather than in this handler.
+ */
+router.all('/', protectRoute, handleMcpRequest);
 
 /** Convenience for the About page: how many tools are registered right now. */
 router.get('/status', (req, res) =>

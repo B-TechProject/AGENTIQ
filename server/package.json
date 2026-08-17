@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint .",
-    "migrate:users": "node scripts/migrate-users.js"
+    "migrate:users": "node scripts/migrate-users.js",
+    "mcp:stdio": "node src/mcp/stdio.js"
   },
   "dependencies": {
     "@apidevtools/swagger-parser": "12.1.0",
