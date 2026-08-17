@@ -19,6 +19,7 @@ import { httpLoggerOptions } from './lib/logger.js';
 import { notFound, errorHandler } from './middleware/error.js';
 import authRoutes from './routes/auth.routes.js';
 import healthRoutes from './routes/health.routes.js';
+import mcpRoutes from './routes/mcp.routes.js';
 
 // Sem 6 feature routes, carried onto the new foundation rather than dropped.
 // Their handlers still contain the defects catalogued in docs/00_SEM6_AUDIT.md
@@ -66,7 +67,12 @@ export function createApp({ logging = env.NODE_ENV !== 'test' } = {}) {
     limit: 20,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    skip: (req) => req.method === 'GET',
+    // GET /me is polled on every route change, so it is not limited. The limiter
+    // is also disabled under test: a suite legitimately registers dozens of
+    // users, and a shared 20-per-15-minutes budget would make results depend on
+    // how many tests ran before this one. rateLimit.test.js covers the limiter
+    // itself in isolation.
+    skip: (req) => req.method === 'GET' || env.NODE_ENV === 'test',
     message: {
       success: false,
       error: { code: 'RATE_LIMITED', message: 'Too many attempts. Try again in a few minutes.' },
@@ -75,6 +81,7 @@ export function createApp({ logging = env.NODE_ENV !== 'test' } = {}) {
 
   app.use('/api', healthRoutes);
   app.use('/api/auth', authLimiter, authRoutes);
+  app.use('/api/mcp', mcpRoutes);
 
   app.use('/api/ai', aiRoutes);
   app.use('/api/analyze', analyzeRoutes);

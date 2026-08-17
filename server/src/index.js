@@ -11,6 +11,12 @@ import { logger } from './lib/logger.js';
 // Prints the set/missing table and exits non-zero if a required var is absent.
 const env = loadEnv();
 
+// Registering the tools is a side effect of importing them, so it happens
+// before the app is built and /api/mcp/tools can never serve an empty registry.
+const { registerAllTools } = await import('./mcp/tools/index.js');
+const tools = await registerAllTools();
+logger.info(`MCP registry: ${tools.length} tools registered`);
+
 const { app } = await import('./app.js');
 
 try {
