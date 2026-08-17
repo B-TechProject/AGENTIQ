@@ -21,10 +21,56 @@ I checked. These are done and need no action:
 | Homebrew 6.0.18 | ✅ installed |
 | AWS account + credentials | ✅ IAM user `cost-intel-user`, region `us-east-1` |
 | AWS S3 access | ✅ can list buckets (4 exist from other projects) |
-| **Bedrock model access** | ✅ **already enabled and invoking successfully** |
+| **Bedrock** | ⚠️ **partially working — see §1.5 below** |
 
-**Bedrock genuinely works already.** I invoked `global.anthropic.claude-haiku-4-5-20251001-v1:0` in
-`ap-south-1` and got a reply (14 tokens in, 4 out). You do **not** need to request model access.
+### ⚠️ Bedrock: Haiku is blocked by an account billing issue
+
+Verified 17 Aug 2026 by invoking every ACTIVE Claude inference profile in `ap-south-1`.
+
+**Working today (4):**
+
+```
+apac.anthropic.claude-3-5-sonnet-20241022-v2:0     ← cheapest working
+apac.anthropic.claude-3-7-sonnet-20250219-v1:0
+global.anthropic.claude-sonnet-4-5-20250929-v1:0
+global.anthropic.claude-sonnet-4-6
+```
+
+**Blocked — every Haiku variant:**
+
+```
+global.anthropic.claude-haiku-4-5-...  ->  aws-marketplace:Subscribe not authorised
+apac.anthropic.claude-3-haiku-...      ->  INVALID_PAYMENT_INSTRUMENT
+```
+
+**Root cause: the AWS account has no valid payment instrument.** Anthropic models on Bedrock are
+delivered through an AWS Marketplace subscription. Models *already* subscribed keep working; any
+model needing a *new* subscription cannot complete it without a payment method on file. **AWS credits
+do not remove this requirement** — credits are applied against a bill, but a valid card must still
+exist for Marketplace subscriptions to be created.
+
+> A note on how this was found: the very first Haiku 4.5 invoke *succeeded*, then the same call
+> failed minutes later. The first call initiated the Marketplace subscription, which then failed to
+> complete. Treat a single successful Bedrock call as provisional until it is repeatable.
+
+### ✅ Resolved — use Amazon Nova instead. No action needed.
+
+Nova is AWS **first-party**, so it needs no Marketplace subscription and is unaffected by the payment
+issue. Verified working and emitting valid JSON on the first attempt:
+
+| Model | in / out per M tokens | |
+|---|---|---|
+| `apac.amazon.nova-micro-v1:0` | ~$0.035 / $0.14 | cheapest |
+| **`apac.amazon.nova-lite-v1:0`** | **~$0.06 / $0.24** | **the default** |
+| `apac.amazon.nova-pro-v1:0` | ~$0.80 / $3.20 | quality comparison |
+
+Nova Lite is ~4× cheaper than Claude Haiku and ~50× cheaper than Sonnet, so **LLM inference stops
+being a meaningful part of the budget.** Also verified working and useful as evaluation comparators:
+`qwen.qwen3-32b-v1:0`, `mistral.ministral-3-8b-instruct`, `google.gemma-3-12b-it`,
+`openai.gpt-oss-120b-1:0`.
+
+**Optional, only if you later want Claude specifically:** Billing and Cost Management → **Payment
+preferences** → add a valid card, then re-run the scan in §7. Not required for this project.
 
 ### So the real remaining list is short
 
@@ -255,7 +301,7 @@ MONGO_URI=mongodb+srv://agentiq_app:PASSWORD@agentiq.xxxxx.mongodb.net/agentiq?r
 AWS_REGION=ap-south-1
 AWS_S3_BUCKET=agentiq-artifacts-23ucs509
 AWS_PROFILE=agentiq
-BEDROCK_MODEL_ID=global.anthropic.claude-haiku-4-5-20251001-v1:0
+BEDROCK_MODEL_ID=apac.amazon.nova-lite-v1:0
 
 # ── Tidy up the legacy Gemini names ───────────────────────────────
 # The schema expects GEMINI_API_KEY. Rename whichever of

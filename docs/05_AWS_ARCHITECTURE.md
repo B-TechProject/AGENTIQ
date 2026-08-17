@@ -97,9 +97,47 @@ Added to `.env.example`. All optional — **absence must not break boot**, same 
 AWS_REGION=ap-south-1
 AWS_S3_BUCKET=                  # specs + evaluation artifacts
 AWS_SECRETS_ID=                 # Secrets Manager secret id; falls back to .env when unset
-BEDROCK_MODEL_ID=global.anthropic.claude-haiku-4-5-20251001-v1:0
+BEDROCK_MODEL_ID=apac.amazon.nova-lite-v1:0
 LLM_PRIMARY=groq                # groq | gemini | bedrock
 ```
+
+### Model choice: Amazon Nova, not Claude
+
+**Decided 17 Aug 2026 after testing every available model against the real account.**
+
+Anthropic models on Bedrock are delivered via an **AWS Marketplace subscription**, which cannot be
+created without a valid payment instrument on the account. Every Haiku variant is therefore blocked
+(`INVALID_PAYMENT_INSTRUMENT` / `aws-marketplace:Subscribe not authorized`), and the Sonnet models
+that do work are ~12× the price.
+
+**Amazon Nova is AWS first-party — no Marketplace subscription, so it is not affected.** Verified
+working and producing valid JSON on the first attempt:
+
+| Model | in / out per M tokens | Notes |
+|---|---|---|
+| `apac.amazon.nova-micro-v1:0` | ~$0.035 / $0.14 | cheapest; clean unfenced JSON |
+| **`apac.amazon.nova-lite-v1:0`** | **~$0.06 / $0.24** | **default** — clean unfenced JSON |
+| `apac.amazon.nova-pro-v1:0` | ~$0.80 / $3.20 | for quality comparison |
+
+Nova Lite is roughly **4× cheaper than Claude Haiku** and **50× cheaper than Sonnet**, which removes
+LLM inference as a budget concern almost entirely.
+
+Also verified working, and useful as evaluation comparators: `qwen.qwen3-32b-v1:0`,
+`mistral.ministral-3-8b-instruct`, `google.gemma-3-12b-it`, `openai.gpt-oss-120b-1:0`.
+
+> **This makes Chapter 4 stronger, not weaker.** The ablation becomes Groq (Llama) vs Gemini vs
+> Bedrock Nova — three genuinely different model families from three vendors — plus a cheap
+> within-Bedrock sweep across Micro / Lite / Pro. That is a far better result than "we used the free
+> one", and it is now affordable enough to run repeatedly.
+
+### Use the Converse API, not InvokeModel
+
+`bedrock-runtime converse` normalises the request and response shape across every model family.
+`invoke-model` requires a different body per vendor (`anthropic_version` for Claude, a different
+schema for Nova, another for Mistral), which would push vendor-specific branching into the adapter.
+
+With Converse, switching model is a **config change, not a code change** — which is the whole point
+of the Phase 7 abstraction.
 
 ### Bedrock requires an *inference profile*, not a bare model id
 
