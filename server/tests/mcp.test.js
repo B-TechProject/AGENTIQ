@@ -217,7 +217,12 @@ describe('withGuards', () => {
     });
     const probe = getTool('probe_sqli');
     const result = await probe.handler({ url: 'https://api.example.com/x' }, ctx());
-    expect(result.notImplemented).toBe(true);
+    // probe_sqli is implemented as of Phase 8, so this no longer returns
+    // notImplemented. api.example.com is not reachable from CI, so what matters
+    // here is that the call was PERMITTED and produced a structured result
+    // rather than a permission error.
+    expect(result.family).toBe('sqli');
+    expect(result).toHaveProperty('findings');
 
     const rows = await AuditEvent.find({ tool: 'probe_sqli' }).lean();
     expect(rows[0].outcome).toBe(OUTCOME.OK);
