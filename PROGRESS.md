@@ -565,3 +565,160 @@ otherwise — deterministic in CI, zero setup locally.
   tab.**
 - Phases 0–5 complete means the master prompt's "Must" tier is cleared: *"The core claim is true.
   Defensible project."*
+
+---
+
+## Phase 6 — Evaluation fixtures · 17 Aug 2026 · ✅ complete
+
+`fixtures/vulnerable-api` (:4001, measures **recall**) and `fixtures/hardened-api` (:4002, measures
+**precision**). `npm run fixtures` starts both. **24 contract tests.**
+
+### The contract identity is the deliverable, not the vulnerabilities
+
+Precision is "findings on hardened" and recall is "findings on vulnerable". That comparison only
+means something if the apps differ **solely** in their defects — otherwise a finding on one and not
+the other could be explained by an incidental difference. So identity is enforced, not assumed:
+both import the same seed data and the same HTML page builder with **the escape function as the only
+injected difference**; `contract.test.js` sends every benign request to both and asserts equality;
+one builder generates both OpenAPI specs.
+
+Six defects, each mapped to a probe family. Defects 1 and 3 are reachable through two shapes each,
+so a probe that tests only one location is still detectable as incomplete.
+
+**`node:sqlite` ships with Node 22**, so the vulnerable app gets a real SQL engine — a genuinely
+concatenated query that genuinely injects — with no native dependency and nothing to compile.
+
+Verified live over HTTP: the injection **executes** on the vulnerable app (`/users/1 OR 1=1--`
+returns a record) and is rejected with a generic 400 on the hardened one; the XSS payload reflects
+verbatim vs escaped; `/admin/users` is 200 vs 401; ACAO is `*` vs absent; 0 vs 4 security headers.
+
+Both specs validate through `@apidevtools/swagger-parser` — the same parser Phase 9 uses — and their
+paths and components are byte-identical.
+
+---
+
+## Phase 7 — Testing Agent v2 · 17 Aug 2026 · ✅ complete
+
+`services/llm.js`, `services/jsonRepair.js`, `agents/testing.agent.js`, plus the run lifecycle:
+`models/TestRun.js`, `services/run.service.js`, `services/explain.service.js`, `routes/runs.routes.js`.
+
+### The architecture guard became load-bearing
+
+`server/src/agents/` gained a real inhabitant, so `tests/architecture.test.js` stopped passing
+vacuously. Verified by temporarily adding `import axios` to the agent: the guard failed and named the
+file, then went green on revert.
+
+### Repair the SHAPE, never the MEANING
+
+Sem 6 rewrote `GET` + `expected 400` into `expected 200`, labelled `// ✅ FIX`. That is editing the
+test until it passes, and combined with status-only assertions it is why "100% first-time pass" was
+tautological. Repair now handles fences, prose, trailing commas, smart quotes and unquoted keys —
+and a test asserts a wrong expectation still **fails**. JSON extraction walks the string tracking
+bracket depth *and* string state, because `lastIndexOf(']')` breaks on `{"pattern":"a}b"}`.
+
+### No fabricated fallback, ever
+
+One bounded repair retry that shows the model its own output and the specific problem, then a visible
+failure. An all-discarded generation throws rather than returning an empty "successful" run.
+
+### BUG-5 fixed structurally
+
+Sem 6 had `let explanationUsed = false` at **module** scope — set true on the first explained failure
+and never reset, so explanations fired **once per server process**. The fix is not a `= false`
+somewhere: the budget is an object created **per run**, so no module-level variable exists that *can*
+leak. A test asserts run **two** still gets explanations.
+
+`EXPLAINING` is time-boxed at 5s and capped at 3 per run; a hanging or throwing provider yields zero
+explanations rather than a failed run.
+
+### Every terminal state persists a run
+
+`CANCELLED`, `GEN_FAILED`, `EXEC_FAILED`, `COMPLETE` are all written. A failed run is data, not a
+void. Transitions are declared and enforced — `DRAFT → COMPLETE` throws.
+
+### Two security fixes beyond the phase spec
+
+**IDOR closed.** Sem 6's `getRunById` called `findById` with no ownership check, so any authenticated
+user could read any run by guessing an id. Reads are scoped by `userId`, and someone else's run
+returns **404 not 403** — 403 would confirm the id exists.
+
+**The Sem 6 testing pipeline was retired, not merely superseded.** `/api/ai`, `/api/analyze` and
+`/api/tests` are removed along with `ai.service.js`, `analyze.service.js`, `testRunner.service.js`,
+`aiRunner.service.js` and `aiExplain.service.js`. Leaving them mounted would have kept Pollinations,
+the `GET+400→200` rewrite and the module-scoped flag **reachable in the running app** — one `curl`
+away from an examiner.
+
+### Deviation
+
+**V11 · Gemini dropped as a provider.** Bedrock covers the fallback role and reaches many model
+families through one Converse interface, so a second bespoke provider key earned nothing.
+`LLM_FALLBACK` now defaults to `bedrock`.
+
+### Not measured yet
+
+**≥95% structural validity over 50 real generations** needs a live provider. The *repair pipeline*
+measures 100% over 50 realistic wrappings, but the model's own validity is a Phase 14 measurement and
+is deliberately not faked.
+
+---
+
+## Phase 8 — Security Agent rebuild · 17 Aug 2026 · ✅ complete
+
+`mcp/probes/fingerprints.js`, `mcp/probes/baseline.js`, five implemented `probe_*` tools,
+`agents/security.agent.js`. **315 tests green** across the workspace.
+
+### Acceptance
+
+| | Target | Result |
+|---|---|---|
+| Families detected on `vulnerable-api` | ≥ 5 of 6 | **6 of 6** |
+| Findings on `hardened-api` | 0 | **0** |
+| Every finding carries payload + signal + baseline | required | asserted per finding |
+
+### BUG-2 — the auth probe needed THREE requests, not two
+
+Sem 6 reported any anonymous 200 as "Accessible without authentication", which flags every public API
+and is what Figure 3.7 shows firing.
+
+**Two requests cannot fix it, and I proved that by getting it wrong first.** Comparing "with
+credentials" against "stripped" produced a **CRITICAL false positive on the hardened fixture**:
+scanning `/users/1` with an `authorization` header it never reads, removing an ignored header changes
+nothing, so the probe concluded auth was bypassed. The Sem 6 mistake in a different costume.
+
+The probe now sends a third request with a deliberately **invalid** credential:
+
+- forged token answered like a real one → the route does not check credentials → public, no finding
+- forged token **rejected** but anonymous still succeeds → genuine bypass → **CRITICAL**
+- no check at all, on a route not declared public → **HIGH**
+
+From outside, "public endpoint working correctly" and "privileged route with no auth check" are
+**indistinguishable** — both serve everyone. That is exactly why intent is a user declaration rather
+than a heuristic.
+
+### BUG-7 — fingerprints that work
+
+Sem 6 used `typeof res.data === "string" && res.data.includes("sql")`: it missed every JSON API
+(an axios JSON response is an object) and fired on prose containing the word. Bodies are now
+serialised before matching, patterns are real driver errors naming the engine, and a test asserts
+*"No SQL knowledge required"* is **not** a finding. Sem 6 also `return`ed after the first payload, so
+the second payload its own report documented never ran.
+
+### The baseline differential
+
+An endpoint already returning 500 to benign input yields **no claim at all** — broken, not
+injectable. That is Sem 6's "any 500 = SQL injection" removed at the root. A length change alone is
+never material either, because reflection naturally lengthens a body.
+
+### Notes
+
+Rate limiting is the sixth family, orchestrated from repeated `http_request` calls rather than a
+tenth tool, because `docs/01_PRD.md` F1 fixes the registry at nine and every request is audited
+anyway. Severity MEDIUM: 8 successes do not prove there is no limiter.
+
+Payloads are read-only — a test asserts none contains a destructive keyword. Severity is calibrated
+rather than uniform: four missing headers reported as HIGH would drown a real SQL injection.
+
+### Still outstanding
+
+- **CI has never been confirmed green on a runner.** The service-container fix was verified locally
+  on both database paths, but the GitHub API rate limit blocked confirmation. **Unverified.**
