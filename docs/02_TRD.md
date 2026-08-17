@@ -427,6 +427,12 @@ it**; Sem 6 declared it and then hardcoded `http://localhost:3001`.
 
 ## 13. Deployment & cost
 
+> **⚠️ SUPERSEDED 17 Aug 2026 — see [05_AWS_ARCHITECTURE.md](05_AWS_ARCHITECTURE.md).**
+> AWS credits became available, so deployment moved to App Runner + S3/CloudFront + Bedrock, and
+> **the ₹0/month claim below no longer holds.** MongoDB Atlas M0 is retained (DocumentDB has no free
+> tier). Everything else in this document — the MCP layer, egress guard, agent rules, data model —
+> is unchanged and provider-agnostic. The original plan is kept here as the recorded alternative.
+
 Server → Render free web service. Web → Render static site or Vercel. DB → MongoDB Atlas M0.
 LLM → Groq free tier (`llama-3.1-8b-instant`: 30 RPM / 6K TPM / 14.4K RPD), Gemini free tier as
 fallback. **Total ₹0/month.**

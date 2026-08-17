@@ -63,8 +63,17 @@ export const envSchema = z
     // ── LLM providers (optional until Phase 7) ───────────────────────────────
     GROQ_API_KEY: z.string().optional(),
     GEMINI_API_KEY: z.string().optional(),
-    LLM_PRIMARY: z.enum(['groq', 'gemini']).default('groq'),
-    LLM_FALLBACK: z.enum(['groq', 'gemini']).default('gemini'),
+    LLM_PRIMARY: z.enum(['groq', 'gemini', 'bedrock']).default('groq'),
+    LLM_FALLBACK: z.enum(['groq', 'gemini', 'bedrock']).default('gemini'),
+
+    // ── AWS (optional — see docs/05_AWS_ARCHITECTURE.md) ─────────────────────
+    // Deliberately no AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY: credentials come
+    // from the default chain locally, an instance role on App Runner, and OIDC in
+    // CI. A long-lived AWS key must never be read from a file in this repo.
+    AWS_REGION: z.string().default('ap-south-1'),
+    AWS_S3_BUCKET: z.string().optional(),
+    AWS_SECRETS_ID: z.string().optional(),
+    BEDROCK_MODEL_ID: z.string().optional(),
 
     // ── Google OAuth (optional — absence must not break boot) ─────────────────
     GOOGLE_CLIENT_ID: z.string().optional(),
@@ -96,6 +105,9 @@ export const OPTIONAL_FEATURE_VARS = {
   GOOGLE_CLIENT_SECRET: 'Google OAuth sign-in',
   GROQ_API_KEY: 'Groq LLM provider',
   GEMINI_API_KEY: 'Gemini LLM provider',
+  BEDROCK_MODEL_ID: 'Bedrock LLM provider',
+  AWS_S3_BUCKET: 'S3 spec & artifact storage',
+  AWS_SECRETS_ID: 'Secrets Manager',
   RENDER_API_KEY: 'Deployment agent',
 };
 
@@ -181,7 +193,9 @@ export function formatEnvTable(source = process.env, parsed = null) {
 export const ENV_KEYS = [
   'NODE_ENV', 'PORT', 'MONGO_URI', 'JWT_SECRET', 'CORS_ORIGIN',
   'APP_BASE_URL', 'API_BASE_URL', 'GROQ_API_KEY', 'GEMINI_API_KEY',
-  'LLM_PRIMARY', 'LLM_FALLBACK', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',
+  'LLM_PRIMARY', 'LLM_FALLBACK',
+  'AWS_REGION', 'AWS_S3_BUCKET', 'AWS_SECRETS_ID', 'BEDROCK_MODEL_ID',
+  'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',
   'RENDER_API_KEY', 'EGRESS_TIMEOUT_MS', 'EGRESS_MAX_BYTES',
   'EGRESS_RPS_PER_HOST', 'ALLOW_PRIVATE_TARGETS',
 ];
