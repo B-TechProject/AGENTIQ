@@ -15,6 +15,19 @@ import axios, { AxiosError } from 'axios';
 export const API_BASE_URL: string =
   import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api';
 
+/**
+ * A misconfigured base URL produces a 404 on EVERY call with no clue why.
+ * That is what a stale Sem 6 .env did: it set VITE_API_URL without the /api
+ * segment, so /auth/login resolved to http://host/auth/login. Warning at
+ * startup costs nothing and saves an hour of confused debugging.
+ */
+if (import.meta.env.DEV && !/\/api\/?$/.test(API_BASE_URL)) {
+  console.warn(
+    `[AGENTIQ] VITE_API_URL is "${API_BASE_URL}", which does not end in /api. ` +
+    'Every request will 404. It should be e.g. http://localhost:3001/api',
+  );
+}
+
 /** The single response envelope — docs/02_TRD.md §10. */
 export interface ApiSuccess<T> { success: true; data: T }
 export interface ApiFailure {

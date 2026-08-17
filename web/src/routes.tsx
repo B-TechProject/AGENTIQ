@@ -1,8 +1,6 @@
 /**
  * Routing — React Router 7, createBrowserRouter (docs/02_TRD.md §3).
- *
- * Sitemap per docs/03_App_Flow.md A1. Screens land in Phase 11; this file
- * establishes the shape so the shell renders and every route resolves.
+ * Sitemap per docs/03_App_Flow.md A1.
  */
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Shell } from '@/components/layout/Shell';
@@ -10,13 +8,19 @@ import { RequireAuth } from '@/components/layout/RequireAuth';
 import { ComponentGallery } from '@/pages/ComponentGallery';
 import { Placeholder } from '@/pages/Placeholder';
 import { LoginPage } from '@/pages/LoginPage';
+import { TestRunnerPage } from '@/pages/TestRunnerPage';
+import { RunDetailPage } from '@/pages/RunDetailPage';
+import { HistoryPage } from '@/pages/HistoryPage';
+import { SpecsPage } from '@/pages/SpecsPage';
+import { ToolRegistryPage } from '@/pages/ToolRegistryPage';
+import { AuditLogPage } from '@/pages/AuditLogPage';
+import { AboutPage } from '@/pages/AboutPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/signup', element: <LoginPage signup /> },
 
-  // The component gallery is a development route and is deliberately public:
-  // it renders no data, only the library.
+  // Development route: renders the component library, no data.
   { path: '/dev/components', element: <ComponentGallery /> },
 
   {
@@ -25,16 +29,16 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <Placeholder title="Dashboard" phase={12} /> },
-      { path: 'run', element: <Placeholder title="Test Runner" phase={11} /> },
-      { path: 'run/:id', element: <Placeholder title="Run detail" phase={11} /> },
+      { path: 'run', element: <TestRunnerPage /> },
+      { path: 'run/:id', element: <RunDetailPage /> },
       { path: 'security', element: <Placeholder title="Security" phase={11} /> },
-      { path: 'specs', element: <Placeholder title="Specs" phase={11} /> },
+      { path: 'specs', element: <SpecsPage /> },
       { path: 'client', element: <Placeholder title="API Client" phase={11} /> },
-      { path: 'history', element: <Placeholder title="History" phase={11} /> },
+      { path: 'history', element: <HistoryPage /> },
       { path: 'deploy', element: <Placeholder title="Deploy" phase={13} /> },
-      { path: 'tools', element: <Placeholder title="Tool Registry" phase={11} /> },
-      { path: 'audit', element: <Placeholder title="Audit Log" phase={11} /> },
-      { path: 'about', element: <Placeholder title="About" phase={11} /> },
+      { path: 'tools', element: <ToolRegistryPage /> },
+      { path: 'audit', element: <AuditLogPage /> },
+      { path: 'about', element: <AboutPage /> },
     ],
   },
 
