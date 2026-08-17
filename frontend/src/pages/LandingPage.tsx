@@ -30,10 +30,10 @@ const features = [
   },
   {
     icon: Bot,
-    title: 'AI Failure Analysis',
+    title: 'Test Runner Agent',
     desc: 'Every failing test gets a detailed AI explanation with suggested fixes.',
     badges: [
-      { label: 'GPT-4o',   variant: 'teal'  as const },
+      { label: 'Groq',     variant: 'teal'  as const },
       { label: 'Auto-fix', variant: 'green' as const },
     ],
     to: '/test',
