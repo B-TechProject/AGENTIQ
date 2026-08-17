@@ -8,11 +8,10 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { connectTestDb, disconnectTestDb } from './helpers/mongo.js';
 import { createApp } from '../src/app.js';
 import { User, BCRYPT_COST } from '../src/models/User.js';
 
-let mongod;
 const app = createApp({ logging: false });
 
 const CREDENTIALS = {
@@ -23,13 +22,11 @@ const CREDENTIALS = {
 };
 
 beforeAll(async () => {
-  mongod = await MongoMemoryServer.create();
-  await mongoose.connect(mongod.getUri());
+  await connectTestDb();
 });
 
 afterAll(async () => {
-  await mongoose.disconnect();
-  await mongod?.stop();
+  await disconnectTestDb();
 });
 
 beforeEach(async () => {

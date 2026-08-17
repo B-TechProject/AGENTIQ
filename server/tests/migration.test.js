@@ -6,20 +6,16 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { connectTestDb, disconnectTestDb } from './helpers/mongo.js';
 import { planMigration, applyMigration } from '../scripts/migrate-users.js';
 import { User } from '../src/models/User.js';
 
-let mongod;
-
 beforeAll(async () => {
-  mongod = await MongoMemoryServer.create();
-  await mongoose.connect(mongod.getUri());
+  await connectTestDb();
 });
 
 afterAll(async () => {
-  await mongoose.disconnect();
-  await mongod?.stop();
+  await disconnectTestDb();
 });
 
 beforeEach(async () => {

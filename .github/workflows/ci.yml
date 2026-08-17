@@ -16,6 +16,25 @@ jobs:
     name: install → lint → typecheck → test
     runs-on: ubuntu-latest
 
+    # A real MongoDB, already running before the job starts.
+    #
+    # The alternative — mongodb-memory-server — downloads a mongod binary on
+    # first use. That caches fine on a developer machine but on a fresh runner
+    # it is a network download on the critical path, and it is what made the
+    # first three CI runs fail while the identical suite passed locally.
+    # tests/helpers/mongo.js uses MONGO_TEST_URI when present and falls back to
+    # mongodb-memory-server otherwise, so local development still needs no setup.
+    services:
+      mongo:
+        image: mongo:8
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -38,11 +57,12 @@ jobs:
       - name: Test
         run: npm test
         env:
-          # The suite must never depend on a real database, a real LLM provider,
-          # or a checked-in .env. tests/setup.js supplies deterministic values;
-          # mongodb-memory-server spawns its own mongod. Nothing here is a secret.
+          # No secrets here, and none are needed: tests/setup.js supplies
+          # deterministic values and config/env.js skips .env entirely when
+          # NODE_ENV=test, so a result can never depend on whose machine ran it.
           NODE_ENV: test
           CI: 'true'
+          MONGO_TEST_URI: mongodb://127.0.0.1:27017
 
       - name: Architecture guard summary
         if: always()
