@@ -180,5 +180,104 @@ happens in Phase 2.
 | Q4 | Confirm deletion of the two redundant remote branches (both proven safe) | Phase 2 task 7 |
 | Q5 | Push authentication — no `gh`, no verified credential helper for `B-TechProject` | first push |
 
-Q1 (JWT rotation) was answered 17 Aug 2026: replace with the value Adarsh supplied, do not push.
-Q6 (BTP2 salvage) resolved by D1–D3 above under the master prompt's delegation to assess and record.
+Q1 (JWT rotation) answered 17 Aug 2026: rotate to the value Adarsh supplied; the *secret* must not be
+pushed (the code fix must). Q6 (BTP2 salvage) resolved by D1–D3 above under the master prompt's
+delegation to assess and record.
+
+---
+
+## Phase 2 — Repository hygiene · 17 Aug 2026 · ✅ complete
+
+Nine commits, pushed to `origin/main`.
+
+### Task 1 · Secrets
+
+- **`JWT_SECRET` rotated.** The public literal was removed from `backend/src/server.js:116` and the
+  new value written to `backend/.env` only — gitignored, never committed, never pushed.
+  No fallback replaces it: `jwt.sign` now throws if the variable is unset, which is correct
+  behaviour. Phase 3 upgrades this to a Zod boot-time check that fails fast with a readable message
+  rather than at the first OAuth callback.
+- The other two call sites (`auth.middleware.js:22`, `utils/token.js:4`) already read
+  `process.env.JWT_SECRET` with no default — unchanged.
+- **Doc redaction.** `MASTER_PROMPT.md` and `docs/00_SEM6_AUDIT.md` quoted the literal verbatim to
+  describe BUG-3. Both redacted to `'<32-char literal>'`; Phase 2's definition of done requires no
+  secret anywhere in the working tree.
+- **History deliberately not rewritten.** The old value remains at `b5c0bdd` and is unreachable from
+  HEAD. Rotation, not redaction, is what makes it harmless. The Sem 6 commit dates are the evidence
+  trail for a two-semester BTP.
+- Full-history scan re-run: no `AIza…`, `gsk_…`, `sk-…`, `GOCSPX-…` or credentialed
+  `mongodb+srv://…` anywhere on any branch.
+
+### Tasks 2–6 · Hygiene
+
+| Task | Result |
+|---|---|
+| Untrack `node_modules` | 2,412 files removed from the index; **2,504 → 102 tracked files**. Only `backend/node_modules` was ever tracked; the root and `frontend/` copies never were. Files untouched on disk. |
+| Line endings | `.gitattributes` (`* text=auto eol=lf`) + `git add --renormalize .` across 32 CRLF source files. Verified pure: `git diff --cached --ignore-all-space` reported only `.gitattributes`. |
+| `.nvmrc` | `22`. fnm now supplies 22.23.2 (npm 10.9.8). |
+| `.gitignore` | Rewritten and grouped. `.env`/`.env.*` ignored with an explicit `!.env.example` negation. |
+| `.env.example` | Every variable from `docs/02_TRD.md` §12. All secret-bearing keys empty; only non-sensitive defaults pre-filled. |
+
+### Task 7 · Remote
+
+- **Remote URL repointed** from `Autonomous-ASD.git` (pre-rename, working only via GitHub's redirect)
+  to the canonical `AGENTIQ.git`.
+- **Both redundant branches deleted**, each re-verified against the live remote immediately before
+  deletion: `copilot/research-project-architecture-analysis` was the *same commit object* as `main`;
+  `feature-backend-service` was an ancestor with **0** commits not in `main`.
+- `origin` now has exactly one branch.
+
+### Verification — fresh clone from GitHub
+
+| Check | Result |
+|---|---|
+| Clone size | 13 MB |
+| Files checked out | 102 |
+| `node_modules` directories | 0 |
+| Files containing CR | 0 — pure LF |
+| Branches | `origin/main` only |
+| `.env.example` present / `.env` absent | ✅ / ✅ |
+| JWT fallback present | ✅ gone |
+| Sem 6 root commit `543f96c` reachable | ✅ still an ancestor of HEAD |
+
+### Deviations
+
+**V2 · Repointing the remote URL was not a listed Phase 2 task.** Added because the remote still used
+the pre-rename `Autonomous-ASD.git` URL and worked only through a GitHub redirect — fragile, and it
+would break if the redirect is ever dropped.
+
+**V3 · Redacting the secret from two docs was not a listed task.** Required by Phase 2's own
+definition of done ("no secret anywhere in the working tree").
+
+**V4 · Set a repo-local git identity.** `user.email` was `adarshdwivedi256@gmail.com` globally while
+all 7 existing commits use `23ucs509@lnmiit.ac.in`. Set repo-locally to match so the BTP commit trail
+shows one contributor. Global config untouched.
+
+**V5 · Added fnm shell integration to `~/.zshrc`.** `fnm install 22 && fnm use 22` had been run, but
+without `eval "$(fnm env --use-on-cd --shell zsh)"` in the profile every new shell still resolved
+Homebrew's Node 25.6.1. One line appended; `node -v` now reports v22.23.2 in a fresh shell. This is
+the only change made outside the repository.
+
+### Not done / carried forward
+
+- **The boot crash (BUG-4) is still present.** `passport.use(new GoogleStrategy(…))` still runs at
+  `server.js:58` module top level. A fresh clone still cannot boot without Google credentials. This
+  is Phase 3 task 5, by design — Phase 2 is hygiene only.
+- **`node_modules` blobs remain in git history.** Deliberate: purging them means a history rewrite.
+  A fresh clone is 13 MB, which is acceptable.
+- **`api.ts:5` still hardcodes `http://localhost:3001/api`**, and `server.js:63,122` still hardcode
+  localhost callback/redirect URLs. Phase 3 / Phase 10.
+- **`frontend/src/hooks/useAI.ts` still calls Anthropic's API from the browser** with "Simulate…"
+  prompts. Dead code; must not survive the Phase 3 restructure.
+- Dependencies are still the Sem 6 versions, not the `docs/02_TRD.md` §2 matrix. Phase 3.
+
+### Open questions
+
+| # | Question | Blocks |
+|---|---|---|
+| Q2 | Rotate the never-committed Groq / Gemini / Mongo / Google-OAuth credentials too? Which are still live? | populating `.env` fully |
+
+Q3 (Node 22) ✅ resolved — fnm 22.23.2 active.
+Q4 (branch deletion) ✅ resolved — both deleted.
+Q5 (push access) ✅ resolved — `credential.helper=osxkeychain` with a stored GitHub credential; push
+works. Code is pushed at phase boundaries; secret *values* never are.
