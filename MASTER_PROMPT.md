@@ -116,8 +116,8 @@ one frontend, and `_archive/`. Salvage decisions recorded in `PROGRESS.md`.
 
 **Tasks**
 1. **Secrets — do this first.**
-   - `server.js` contains `process.env.JWT_SECRET || 't0SxE6P21qEuYU89r9JGlfOsiZHf5wPG'`. Remove
-     the fallback entirely.
+   - `server.js` contains `process.env.JWT_SECRET || '<32-char literal>'`. Remove
+     the fallback entirely. (Done in Phase 2; value redacted here and rotated.)
    - Grep the whole tree and full git history for other secrets: `git log -p | grep -iE
      "api[_-]?key|secret|token|password|mongodb\+srv"`. Report everything found.
    - **STOP and tell Adarsh**: the JWT secret is public and must be rotated; any Mongo/Groq/Gemini

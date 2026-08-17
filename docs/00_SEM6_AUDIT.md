@@ -70,7 +70,8 @@ Any 200 response without credentials returns `"Accessible without authentication
 API — and Figure 3.7 shows it firing.
 
 **BUG-3 · A live JWT secret is committed to a public repository.**
-`server.js:117` → `process.env.JWT_SECRET || 't0SxE6P21qEuYU89r9JGlfOsiZHf5wPG'`.
+`server.js:117` → `process.env.JWT_SECRET || '<32-char literal>'`. (Value redacted here in Sem 7;
+it remains in git history at `b5c0bdd`, which is why it had to be rotated rather than merely deleted.)
 Anyone can forge tokens against any deployment where the env var is unset. **Rotate it and delete
 the fallback before anything else.**
 
