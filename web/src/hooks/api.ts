@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '@/services/api';
 import type {
   TestRun, McpTool, AuditEvent, ApiSpec, Grant, RiskClass, HealthStatus, HttpMethod, Finding,
+  Deployment, DeployConfig, PreflightCheck,
 } from '@/types';
 
 /* ── Health ───────────────────────────────────────────────────────────────── */
@@ -186,3 +187,50 @@ export function useSendRequest() {
     }>('/request/send', input),
   });
 }
+
+/* ── Deployment (F5) ──────────────────────────────────────────────────────── */
+
+export interface DeployInput {
+  repo: string;
+  branch: string;
+  serviceName: string;
+  runtime: 'node' | 'python' | 'ruby' | 'go' | 'docker';
+  plan: 'free' | 'starter' | 'standard';
+  region: 'oregon' | 'frankfurt' | 'singapore' | 'ohio' | 'virginia';
+  buildCommand: string;
+  startCommand: string;
+  envVars: Record<string, string>;
+  dryRun: boolean;
+}
+
+export const useDeployConfig = () => useQuery({
+  queryKey: ['deployments', 'config'],
+  queryFn: () => apiGet<DeployConfig>('/deployments/config'),
+});
+
+/** Read-only. Answers "would this deploy?" without consenting to a deployment. */
+export function usePreflight() {
+  return useMutation({
+    mutationFn: (input: DeployInput) =>
+      apiPost<{ checks: PreflightCheck[]; ok: boolean; needsGrant: boolean }>(
+        '/deployments/preflight', input),
+  });
+}
+
+export function useDeploy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: DeployInput) => apiPost<{ deployment: Deployment }>('/deployments', input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['deployments'] });
+      qc.invalidateQueries({ queryKey: ['mcp', 'audit'] });
+      qc.invalidateQueries({ queryKey: ['runs'] });
+    },
+  });
+}
+
+export const useDeployments = (limit = 20) => useQuery({
+  queryKey: ['deployments', limit],
+  queryFn: () => apiGet<{ total: number; count: number; deployments: Deployment[] }>(
+    '/deployments', { limit }),
+});

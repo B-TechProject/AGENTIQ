@@ -6,7 +6,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Shell } from '@/components/layout/Shell';
 import { RequireAuth } from '@/components/layout/RequireAuth';
 import { ComponentGallery } from '@/pages/ComponentGallery';
-import { Placeholder } from '@/pages/Placeholder';
+import { DeployPage } from '@/pages/DeployPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { TestRunnerPage } from '@/pages/TestRunnerPage';
 import { RunDetailPage } from '@/pages/RunDetailPage';
@@ -39,7 +39,7 @@ export const router = createBrowserRouter([
       { path: 'specs', element: <SpecsPage /> },
       { path: 'client', element: <ApiClientPage /> },
       { path: 'history', element: <HistoryPage /> },
-      { path: 'deploy', element: <Placeholder title="Deploy" phase={13} /> },
+      { path: 'deploy', element: <DeployPage /> },
       { path: 'tools', element: <ToolRegistryPage /> },
       { path: 'audit', element: <AuditLogPage /> },
       { path: 'about', element: <AboutPage /> },

@@ -32,6 +32,7 @@ import requestRoutes from './routes/request.routes.js';
 import securityRoutes from './routes/security.routes.js';
 import runsRoutes from './routes/runs.routes.js';
 import specsRoutes from './routes/specs.routes.js';
+import deploymentsRoutes from './routes/deployments.routes.js';
 
 export function createApp({ logging = env.NODE_ENV !== 'test' } = {}) {
   const app = express();
@@ -88,6 +89,7 @@ export function createApp({ logging = env.NODE_ENV !== 'test' } = {}) {
   app.use('/api/security', securityRoutes);
   app.use('/api/runs', runsRoutes);
   app.use('/api/specs', specsRoutes);
+  app.use('/api/deployments', deploymentsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

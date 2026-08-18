@@ -83,6 +83,9 @@ export const envSchema = z
 
     // ── Deployment (optional) ────────────────────────────────────────────────
     RENDER_API_KEY: z.string().optional(),
+    // Overridable so the deployment tests can drive a local fake control plane
+    // instead of creating real services in a real Render account.
+    RENDER_API_BASE: z.string().url().optional(),
 
     // ── Egress guard (Phase 4) ───────────────────────────────────────────────
     EGRESS_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
@@ -197,7 +200,7 @@ export const ENV_KEYS = [
   'LLM_PRIMARY', 'LLM_FALLBACK',
   'AWS_REGION', 'AWS_S3_BUCKET', 'AWS_SECRETS_ID', 'BEDROCK_MODEL_ID',
   'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',
-  'RENDER_API_KEY', 'EGRESS_TIMEOUT_MS', 'EGRESS_MAX_BYTES',
+  'RENDER_API_KEY', 'RENDER_API_BASE', 'EGRESS_TIMEOUT_MS', 'EGRESS_MAX_BYTES',
   'EGRESS_RPS_PER_HOST', 'ALLOW_PRIVATE_TARGETS',
 ];
 

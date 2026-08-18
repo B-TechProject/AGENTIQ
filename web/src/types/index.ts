@@ -152,3 +152,47 @@ export interface HealthStatus {
   googleOAuth: string;
   env: string;
 }
+
+/* ── Deployment (F5, Phase 13) ─────────────────────────────────────────────── */
+
+export type DeployState =
+  | 'PREFLIGHT' | 'PREFLIGHT_FAILED' | 'DEPLOYING' | 'DEPLOY_FAILED' | 'VERIFYING' | 'COMPLETE';
+
+export interface PreflightCheck {
+  name: string;
+  status: 'pass' | 'warn' | 'fail';
+  detail: string;
+}
+
+export interface Deployment {
+  _id: string;
+  provider: string;
+  repo: string;
+  branch: string;
+  serviceName: string;
+  state: DeployState;
+  stateHistory: { state: string; at: string; note?: string }[];
+  preflight: PreflightCheck[];
+  serviceId: string | null;
+  deployId: string | null;
+  liveUrl: string | null;
+  postDeployRunId: string | null;
+  verification?: {
+    testsPassed: number;
+    testsTotal: number;
+    findings: number;
+    healthy: boolean;
+  };
+  error?: { code: string; message: string };
+  startedAt: string;
+  finishedAt?: string;
+}
+
+export interface DeployConfig {
+  configured: boolean;
+  provider: string;
+  preflightHosts: string[];
+  autoVerifyFamilies: string[];
+  requiresApprovalFamilies: string[];
+  note: string;
+}
