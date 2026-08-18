@@ -722,3 +722,130 @@ rather than uniform: four missing headers reported as HIGH would drown a real SQ
 
 - **CI has never been confirmed green on a runner.** The service-container fix was verified locally
   on both database paths, but the GitHub API rate limit blocked confirmation. **Unverified.**
+
+---
+
+## Phases 9–12 — Ingestion, UI, run lifecycle, dashboard · 18 Aug 2026 · ✅ complete
+
+**Phase 9 — OpenAPI ingestion.** YAML and JSON, import by URL (through the egress guard) or upload.
+`ApiSpec` stores the parsed operations; a grounded run cites the operation it was generated from, so
+"the model invented this endpoint" stops being a possible explanation for a failure.
+
+**Phase 10 — fresh `web/`.** Vite 8 + React 19 + Tailwind v4, scaffolded from scratch rather than
+salvaged. Tailwind v4 is CSS-first: no `tailwind.config.js`, no `postcss.config.js`, tokens live in
+an `@theme` block taken verbatim from `docs/04_App_UI.md` §2. Fonts are self-hosted via
+`@fontsource` so the app has no third-party runtime dependency.
+
+**Phase 11 — every screen, four states each.** Loading, empty, error and populated are all designed;
+the empty states carry the honest sentence rather than a shrug. `PermissionSheet` is the load-bearing
+component: `network.probe` starts unchecked every time, Esc cancels but Enter does **not** allow, and
+there is deliberately no click-outside handler. A consent dialog you can dismiss by reflex is not
+consent.
+
+**Phase 12 — the dashboard is real.** Every figure is a Mongo aggregation. Sem 6 rendered `2,847`,
+`142ms`, `98` and `14` as string literals in the component tree. A new account now shows honest zeros
+and a call to action, and `passRate` is `null` rather than `0` when nothing has run — "no data" and
+"0% pass" are different claims.
+
+### Two defects found and fixed while wiring the UI
+
+- **Stale `web/.env`** set `VITE_API_URL` without the `/api` suffix, so login 404'd while typecheck
+  and build were both clean. A dev-time warning now fires when the value does not end in `/api`.
+- **TypeScript 7 removed `baseUrl`**; paths are mapped relative to `tsconfig.json` instead.
+
+---
+
+## Phase 13 — Deployment Agent ★ · 18 Aug 2026 · ✅ complete
+
+`docs/01_PRD.md` F5 is blunt about the bar: *"a deployment that verifies itself is a genuine
+contribution; a deploy button is not."*
+
+### Where things run — the distinction a viva will find
+
+|                                            |            |
+| ------------------------------------------ | ---------- |
+| Where **AGENTIQ itself** is hosted         | AWS        |
+| Where the Deployment Agent deploys **the user's API** | Render |
+
+These got conflated early on. Render is the deploy target because F5 requires post-deploy
+verification: Render exposes a synchronous deploy-status endpoint and a stable URL within a minute
+or two, whereas App Runner takes 5–10 minutes to reach RUNNING — which turns the verify step into a
+background job rather than something demonstrable in a ten-minute viva.
+
+### Three phases, three escalating risk classes
+
+| Phase     | Risk class     | What it may do                                       |
+| --------- | -------------- | ---------------------------------------------------- |
+| Preflight | `network.read` | Read `api.github.com`. Changes nothing.              |
+| Deploy    | `deploy.write` | Grant **and** explicit per-action confirmation.      |
+| Verify    | `network.read` | Testing + read-only security families on the live URL |
+
+Preflight is confined to `network.read` on purpose: a user can ask *"would this deploy?"* without
+consenting to a deployment. If preflight needed `deploy.write`, checking would require consenting
+first, which defeats the point of having risk classes.
+
+### The check that earns its keep
+
+`start-command` reads `package.json` through the GitHub contents API and fails when there is no
+`start` script. A build that succeeds and a service that never binds a port is the commonest Render
+failure. Catching it costs one request; catching it on Render costs a full build. Run against this
+repository's own root it correctly refuses — the monorepo root has no `start` script.
+
+### A bug in my own first cut
+
+Preflight originally reported a permission refusal as a `warn` and still returned `ok: true`. So it
+would bless a repository it had never actually read. *"We were not allowed to look"* and *"we looked
+and it is fine"* must not produce the same verdict. Denials are now `fail`, `needsGrant` is
+surfaced, and there is a regression test.
+
+### The credential
+
+`RENDER_API_KEY` is read from the environment **inside** the handler and is deliberately absent from
+`inputSchema`. If it were an input field it would flow into `hashInput()`, into any validation error
+that echoes the input, and into every future debug log someone adds. `redact()` scrubs both the
+configured value and the `rnd_` shape from anything the provider hands back. A test asserts no audit
+row contains it.
+
+### Post-deploy verification, and what it honestly does not cover
+
+The live URL cannot have been consented to in advance — it did not exist when the sheet was
+answered. So `network.read` is granted for **exactly that one host**, through the normal grant store,
+so it appears in `/api/mcp/grants` and the audit trail like any other grant.
+
+`network.probe` is **not** granted. `sqli`, `xss` and `auth` send attack-indicator payloads, and
+`permissions.js` is explicit that `network.probe` is never auto-granted under any configuration. The
+automatic verification therefore covers four of six families, and the UI says which three were
+skipped and why. A partial scan that looks complete would be worse than no scan.
+
+### Testing
+
+41 tests against faked Render and GitHub control planes — no credential, no real infrastructure, no
+outbound request on CI. What is real: the agent, the tool, the permission gate, the egress guard, the
+audit writer and the database. The fakes record every request, which is what lets a test assert the
+thing that matters most: **a dry run sends no mutating request at all.**
+
+---
+
+## Defect found in Phase 13 — the SSRF guard could not reach any hostname
+
+Verifying preflight against the real GitHub API surfaced a bug in `egress.js`, not in the new code.
+
+Node ≥ 20 enables `autoSelectFamily` by default. That path calls a custom `lookup` with
+`{ all: true }` and expects an **array** of `{ address, family }`; the override answered with the
+older positional `cb(null, address, family)` form. Node read `addresses[0]` as `undefined`, and every
+request to a **hostname** failed with `Invalid IP address: undefined`.
+
+IP pinning is what defeats DNS rebinding, so this is the central mechanism of the whole guard. It
+failed **closed** rather than open — requests errored rather than skipping validation — so it was
+never a security hole. But AGENTIQ could not reach any real API by hostname.
+
+**Why 373 green tests missed it.** Every fixture is reached at `127.0.0.1`, and Node skips the
+`lookup` callback entirely for an IP literal. The pinning path had never once been executed by the
+suite. The tell was not in any assertion; it was that every target shared one shape.
+
+The new tests use a hostname against a **dual-stack** server, because `localhost` resolves to `::1`
+first on macOS and `127.0.0.1` first elsewhere — binding one family would make the result depend on
+the machine. Both calling conventions are asserted directly, and reverting the fix fails them.
+
+Worth stating plainly in the report: a suite can be comprehensive by count and still leave the most
+important line unexercised, when the fixtures are all the same shape.
