@@ -117,6 +117,7 @@ Fill in the three that matter. Everything else has a working default:
 | Variable | How to get it |
 | --- | --- |
 | `MONGO_URI` | Atlas → Connect → Drivers. Add `0.0.0.0/0` to the IP access list. |
+| Google sign-in, verification email | Optional. Both degrade cleanly when absent — see [docs/06_SETUP_AUTH.md](docs/06_SETUP_AUTH.md). |
 | `JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` |
 | `BEDROCK_MODEL_ID` + AWS credentials | Or set `GROQ_API_KEY` instead — either provider works alone. |
 
@@ -255,6 +256,7 @@ docs/            PRD, TRD, app flow, UI spec, AWS architecture, evaluation
 | [docs/02_TRD.md](docs/02_TRD.md) | Technical design |
 | [docs/03_App_Flow.md](docs/03_App_Flow.md) | Screen-by-screen behaviour and the demo script |
 | [docs/05_AWS_ARCHITECTURE.md](docs/05_AWS_ARCHITECTURE.md) | Hosting, and the measured LLM routing decision |
+| [docs/06_SETUP_AUTH.md](docs/06_SETUP_AUTH.md) | Google OAuth and verification email, step by step |
 | [docs/90_EVALUATION.md](docs/90_EVALUATION.md) | Chapter 4 — generated, never hand-edited |
 | [PROGRESS.md](PROGRESS.md) | Build log, including defects found and how |
 

@@ -37,14 +37,44 @@ export const MAIL_DRIVER = {
 export function resolveDriver() {
   const wanted = env.MAIL_DRIVER ?? MAIL_DRIVER.RESEND;
   if (wanted === MAIL_DRIVER.RESEND && env.RESEND_API_KEY) return MAIL_DRIVER.RESEND;
-  if (wanted === MAIL_DRIVER.SMTP && env.SMTP_URL) return MAIL_DRIVER.SMTP;
+  if (wanted === MAIL_DRIVER.SMTP && smtpConfigured()) return MAIL_DRIVER.SMTP;
   return MAIL_DRIVER.CONSOLE;
 }
 
+/**
+ * SMTP can be configured two ways, and the simple one exists on purpose.
+ *
+ * GMAIL_USER + GMAIL_APP_PASSWORD is the path most people actually take, and it
+ * sidesteps a nasty failure: Google displays an app password as four
+ * space-separated groups ("abcd efgh ijkl mnop"), and pasting that into a URL
+ * produces a malformed connection string with an authentication error that
+ * says nothing about spaces. Discrete variables let the code strip them.
+ *
+ * SMTP_URL remains for any other provider.
+ */
+export const smtpConfigured = () =>
+  Boolean(env.SMTP_URL || (env.GMAIL_USER && env.GMAIL_APP_PASSWORD));
+
+/** Google shows app passwords in groups of four; nobody removes the spaces. */
+const normaliseAppPassword = (pw) => String(pw ?? '').replace(/\s+/g, '');
+
 export const isMailConfigured = () => resolveDriver() !== MAIL_DRIVER.CONSOLE;
 
-/** The From address. Resend's shared sender works with no domain set up. */
-const fromAddress = () => env.MAIL_FROM ?? 'AGENTIQ <onboarding@resend.dev>';
+/**
+ * The From address.
+ *
+ * Gmail will not let you send as an address you do not own — it silently
+ * rewrites the header, or rejects outright — so when sending through Gmail the
+ * default From must be the Gmail account itself rather than Resend's shared
+ * sender.
+ */
+function fromAddress() {
+  if (env.MAIL_FROM) return env.MAIL_FROM;
+  if (resolveDriver() === MAIL_DRIVER.SMTP && env.GMAIL_USER) {
+    return `AGENTIQ <${env.GMAIL_USER}>`;
+  }
+  return 'AGENTIQ <onboarding@resend.dev>';
+}
 
 class MailError extends Error {
   constructor(message, code = 'MAIL_SEND_FAILED') {
@@ -79,22 +109,51 @@ async function sendViaResend({ to, subject, html, text }) {
 }
 
 async function sendViaSmtp({ to, subject, html, text }) {
-  // Imported lazily so nodemailer is only a dependency for deployments that
-  // actually use SMTP. It is NOT in package.json by default — Resend is the
-  // supported driver and needs no extra package.
+  // Imported lazily so the module is only loaded by deployments that use SMTP.
   let nodemailer;
   try {
     nodemailer = (await import('nodemailer')).default;
   } catch {
     throw new MailError(
-      'MAIL_DRIVER=smtp needs the nodemailer package, which is not installed. '
-      + 'Run `npm i nodemailer --workspace server`, or use MAIL_DRIVER=resend.',
+      'MAIL_DRIVER=smtp needs the nodemailer package. Run '
+      + '`npm i nodemailer --workspace server`, or use MAIL_DRIVER=resend.',
       'MAIL_DRIVER_UNAVAILABLE',
     );
   }
-  const transport = nodemailer.createTransport(env.SMTP_URL);
-  const info = await transport.sendMail({ from: fromAddress(), to, subject, html, text });
-  return { driver: MAIL_DRIVER.SMTP, id: info.messageId ?? null };
+
+  const transport = env.SMTP_URL
+    ? nodemailer.createTransport(env.SMTP_URL)
+    : nodemailer.createTransport({
+      host: env.SMTP_HOST ?? 'smtp.gmail.com',
+      port: Number(env.SMTP_PORT ?? 465),
+      secure: Number(env.SMTP_PORT ?? 465) === 465,
+      auth: {
+        user: env.GMAIL_USER,
+        // Google displays app passwords as four space-separated groups and
+        // nobody removes the spaces before pasting.
+        pass: normaliseAppPassword(env.GMAIL_APP_PASSWORD),
+      },
+    });
+
+  try {
+    const info = await transport.sendMail({ from: fromAddress(), to, subject, html, text });
+    return { driver: MAIL_DRIVER.SMTP, id: info.messageId ?? null };
+  } catch (err) {
+    // Gmail's own message is terse — "535-5.7.8 Username and Password not
+    // accepted" — and the cause is nearly always one of two specific things.
+    // Naming them beats leaving someone to search for the error code.
+    if (/invalid login|535/i.test(err.message)) {
+      throw new MailError(
+        `SMTP authentication was rejected: ${err.message.split('\n')[0]}. `
+        + 'Use a Google APP PASSWORD, not the account password — and app passwords '
+        + 'only exist once 2-Step Verification is enabled on that account.',
+        'MAIL_AUTH_REJECTED',
+      );
+    }
+    throw new MailError(`SMTP send failed: ${err.message}`);
+  } finally {
+    transport.close?.();
+  }
 }
 
 /**
