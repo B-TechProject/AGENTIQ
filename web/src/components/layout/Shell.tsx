@@ -88,11 +88,27 @@ function ProviderChip() {
   });
 
   if (!data) return null;
-  const active = data.llmProviders.find((p) => p.configured);
+
+  /**
+   * The RESOLVED chain, not the first configured entry in array order.
+   *
+   * This used to read `llmProviders.find(p => p.configured)`, which returned
+   * whichever provider happened to be first in the array. With both configured
+   * it displayed "groq · fallback" while Bedrock was actually answering every
+   * request — the chip contradicted reality, which is worse than showing
+   * nothing. /api/health now reports the order providerOrder() will really use.
+   */
+  const [primary, ...rest] = data.llmChain?.order ?? [];
+
+  if (!primary) {
+    return <span className="t-small text-danger">no LLM provider configured</span>;
+  }
 
   return (
-    <span className="t-small text-ink-subtle">
-      {active ? `${active.name} · ${active.role}` : 'no LLM provider configured'}
+    <span className="t-small text-ink-subtle" title={rest.length ? `falls back to ${rest.join(', ')}` : 'no fallback configured'}>
+      {primary} · primary
+      {/* A chain with nothing to fall back to is worth seeing at a glance. */}
+      {rest.length === 0 && <span className="text-warning"> · no fallback</span>}
     </span>
   );
 }

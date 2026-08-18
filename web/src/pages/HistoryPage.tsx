@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { History, AlertTriangle } from 'lucide-react';
 import { useRuns } from '@/hooks/api';
 import { Card, MethodChip, Chip, StatusChip, SkeletonRows, EmptyState, Button, Input } from '@/components/ui';
+import type { TestRun } from '@/types';
 
 export function HistoryPage() {
   const [search, setSearch] = useState('');
@@ -77,8 +78,15 @@ export function HistoryPage() {
                       <Link to={`/run/${r._id}`} className="hover:text-accent">{r.target.url}</Link>
                     </td>
                     <td className="px-4">
+                      {/*
+                        An ERRORED run is not a pass. This read
+                        `failed > 0 ? 'fail' : 'pass'`, so a run where every
+                        case errored — nothing executed at all — displayed
+                        PASS with 0/5 beside it. A run only passes when every
+                        case ran and every case passed.
+                      */}
                       {r.state === 'COMPLETE'
-                        ? <StatusChip status={r.summary.failed > 0 ? 'fail' : 'pass'} />
+                        ? <StatusChip status={runVerdict(r.summary)} />
                         : <Chip className="bg-warning-50 text-warning">{r.state}</Chip>}
                     </td>
                     <td className="t-mono px-4 text-right text-[12.5px]" data-numeric>
@@ -96,4 +104,17 @@ export function HistoryPage() {
       )}
     </div>
   );
+}
+
+/**
+ * A run passes only when every case RAN and every case passed.
+ *
+ * `errored` counts cases that never produced a verdict — a refused permission,
+ * a blocked host, a transport failure. Treating those as anything but a
+ * problem would let a run that executed nothing look successful.
+ */
+function runVerdict(summary: TestRun['summary']): 'pass' | 'fail' | 'error' {
+  if (summary.errored > 0) return 'error';
+  if (summary.failed > 0 || summary.totalTests === 0) return 'fail';
+  return summary.passed === summary.totalTests ? 'pass' : 'fail';
 }

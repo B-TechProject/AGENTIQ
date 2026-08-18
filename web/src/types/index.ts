@@ -149,6 +149,12 @@ export interface HealthStatus {
   uptime: number;
   mongo: string;
   llmProviders: { name: string; configured: boolean; role: string }[];
+  /** The chain as providerOrder() will actually resolve it, with per-task models. */
+  llmChain: {
+    order: string[];
+    hasFallback: boolean;
+    models: Record<string, Record<string, string>>;
+  };
   googleOAuth: string;
   env: string;
 }

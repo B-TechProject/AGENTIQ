@@ -1,328 +1,263 @@
-# ⚡ AgentIQ
-**Enterprise API Intelligence & Autonomous Testing Command Center**
+# AGENTIQ
 
-A state-of-the-art AI pipeline that watches enterprise APIs 24/7, generates dynamic robust test cases, detects insidious security vulnerabilities, and analyzes software failures independently — all executed seamlessly with a sophisticated human-in-the-loop dashboard.
+**An agentic platform for API testing and security validation, where every outbound request
+passes through a permission-checked, SSRF-guarded, audited tool layer.**
 
-
----
-
-## The Problem — Why This Exists
-Imagine you are the QA Lead for an enterprise suite possessing hundreds of internal and external APIs. Your engineering team builds tests manually — hundreds of them every sprint. They check structural validity, boundary conditions, edge cases, and basic security flaws. On a good sprint, they achieve about 70% coverage. But here is the problem: an undocumented edge case or an unauthenticated endpoint might bypass the suite completely until it fails silently in production.
-
-**The leakage is technical, continuous, and compounding.**
-Industry data shows that enterprises lose significant engineering bandwidth to writing and maintaining API tests, while simultaneously exposing themselves to critical vulnerabilities like SQLi, XSS, and IDOR on newly developed endpoints. 
-
-**The Critical Gap**: No existing tool combines **dynamic AI-generated test scaffolding** + **autonomous security assessment** + **historical failure reasoning** in a unified dashboard. **AgentIQ** unifies these capabilities into an AI-orchestrated system that runs continuously, tests autonomously, and records results comprehensively.
+B.Tech final-year project · Semester 7 · Adarsh Dwivedi (23UCS509), LNMIIT Jaipur
 
 ---
 
-## What AgentIQ Does — Solution Overview
+## What it actually does
 
-AgentIQ is an autonomous AI testing agent system. It is not just a dashboard showing pass/fail metrics; it is an active participant in your enterprise QA operations that generates tests, detects problems, reasons about causes, and provides immediate actionable insights.
+You give it an API endpoint and a sentence describing it. It:
 
-* **Generates Cases**: Interrogates the target endpoint description intelligently to automatically construct varied payloads using Amazon/Mistral (or Pollinations AI) LLMs.
-* **Executes Autonomously**: Invokes the tests against the live endpoint dynamically calculating exact latency differentials.
-* **Detects Anomalies**: Autonomously scans for authentication bypasses, SQL Injectability, and XSS parameter reflection on demand.
-* **Reasons & Synthesizes**: Interprets raw JSON failure responses and translates them into plain-English root cause analyses.
-* **Maintains Compliance**: Logs every single test run to a MongoDB audit history ensuring zero test amnesia.
+1. **Generates executable test cases** with an LLM — multi-assertion, grounded in your OpenAPI
+   spec when you supply one.
+2. **Executes them** and decides pass or fail **deterministically**. The model proposes
+   assertions; a tool evaluates them. The LLM never judges its own work.
+3. **Probes six vulnerability families** (SQL injection, reflected XSS, broken authentication,
+   CORS, security headers, rate limiting) using a baseline differential, so a finding requires a
+   material deviation from benign behaviour rather than a suspicious-looking string.
+4. **Explains failures** in plain English — time-boxed and best-effort, never blocking a run.
+5. **Deploys to Render and then tests what it just deployed**, attaching the result to the
+   deployment record.
 
-## System Workflow Flowchart
-This flowchart defines the operational execution a user experiences when interacting directly with AgentIQ from endpoint discovery through audit storage.
+Every one of those steps reaches the network only through an MCP tool. That is the contribution.
 
-```mermaid
-flowchart TD
-    A([User Input: Endpoint URL & Method]) --> B{What is the operation?}
-    B -->|Generate AI Tests| C[Query Groq Llama-3 / GPT-4o]
-    B -->|Security Scan| D[Inject SQLi/XSS Probes]
-    
-    C --> E[Extract & Normalize Synthesized JSON Tests]
-    E --> F[Execute API Payload against Target]
-    
-    D --> G[Analyze Target Response for Reflection/DB Dumps]
-    G --> H{Vulnerability Found?}
-    H -->|Yes| I[Flag Threat on Dashboard]
-    H -->|No| J[Log as Secured]
-    
-    F --> K{Assertion Passed?}
-    K -->|Yes| L[Log Success & Latency]
-    K -->|No| M[Trigger Explainer LLM for Failure Diagnostics]
-    
-    L --> N[(MongoDB Audit Data Lake)]
-    M --> N
-    I --> N
-    J --> N
-```
+### What it is not
+
+It is not a monitoring product, it does not watch anything continuously, and it does not replace
+a security audit. It detects **indicators** on endpoints you point it at and tell it you are
+authorised to test. See [Known limitations](#known-limitations) — that section is not boilerplate.
 
 ---
 
-## High Level System Architecture
-A completely decoupled, orchestrator-led architecture. The frontend connects to an Express gateway which strictly delegates domains to autonomous service agents.
+## The architecture, and why it is shaped this way
 
-```mermaid
-flowchart TB
-    %% ── STYLES ─────────────────────────
-    classDef main fill:#0f172a,stroke:#3b82f6,color:#f8fafc,stroke-width:2px
-    classDef core fill:#1e3a8a,stroke:#60a5fa,color:#eff6ff,stroke-width:2px
-    classDef infra fill:#064e3b,stroke:#10b981,color:#ecfdf5,stroke-width:2px
-    
-    User["👤 Developer/QA"]:::main
-    
-    subgraph UI["🖥️ Presentation Layer (Vite/React)"]
-        direction LR
-        Dashboard["Metrics Dashboard"]
-        Executer["Test Execution Desk"]
-        SecDash["Security Monitor"]
-    end
-    class UI main
-    
-    subgraph API["🔌 Backend Integration (Express)"]
-        Gateway["REST Gateway (/api)"]
-    end
-    class API main
-
-    subgraph Agents["🧠 Autonomous Agents"]
-        direction TB
-        Generator["🧬 AI Test Generator"]
-        Runner["⚡ Latency/Assert Runner"]
-        Explainer["🧠 Failure Reasoning"]
-        Security["🛡 Vulnerability Scanner"]
-    end
-    class Agents core
-
-    subgraph Infrastructure["☁️ Persistence & LLMs"]
-        direction LR
-        DB["🗄️ MongoDB Collections"]
-        LLM["🤖 Groq / Pollinations Inference"]
-    end
-    class Infrastructure infra
-
-    User --> UI
-    UI --> API
-    API --> Gateway
-    Gateway --> Generator
-    Gateway --> Runner
-    Gateway --> Security
-    Runner -->|On Fail| Explainer
-    Generator <--> LLM
-    Explainer <--> LLM
-    Runner --> DB
-    Security --> DB
-```
-
----
-
-## Low Level Data Flow Diagram (DFD)
-Mapping the exact traversal of JSON schemas between independent entities during an AI Test construction and resolution logic block.
+The central claim is that **an agent never performs I/O.** It may only call a registered tool.
 
 ```mermaid
 flowchart LR
-    subgraph External["External Network"]
-        Target[Target REST API]
-    end
+  subgraph agents["server/src/agents/ — NO I/O, enforced by a test"]
+    T[Testing agent]
+    S[Security agent]
+    D[Deployment agent]
+  end
 
-    subgraph Storage["MongoDB Tier"]
-        Hist[(runs_collection)]
-        Proj[(projects_collection)]
-    end
+  subgraph guards["withGuards() — the order is not negotiable"]
+    direction TB
+    P[1 · permission gate] --> A1[2 · audit: started]
+    A1 --> V[3 · schema validation]
+    V --> E[4 · SSRF egress guard]
+    E --> H[5 · handler]
+    H --> A2[6 · audit: outcome — ALWAYS, even on throw]
+  end
 
-    subgraph Process["AI Processing Services"]
-        GenAI[Llama-3 Generator]
-        SecScan[Auth/SQLi Interceptor]
-        Explain[Diagnostic AI]
-    end
-
-    subgraph State["Frontend Zustand Store"]
-        AuthUI[JWT Session]
-        Active[Active Test Context]
-    end
-
-    AuthUI --> Active
-    Active -->|"POST {url, method}"| GenAI
-    Active -->|"POST {url, mode}"| SecScan
-    GenAI -->|HTTP Valid Payload| Target
-    SecScan -->|Malicious Payload| Target
-    Target -.->|200 OK| Active
-    Target -.->|500 Trace| Explain
-    Explain -->|Formatted Markdown| Active
-    Active -->|Write Log| Hist
+  agents -->|"tool call"| guards
+  guards -->|"only path to a socket"| NET[(target API)]
+  A2 --> DB[(append-only audit)]
 ```
 
----
+**Why MCP rather than plain function calls.** A function call is a convention; you defend it with
+discipline, and discipline erodes over fifteen weeks of edits. Routing every side effect through a
+registry gives one choke point where permission, validation, SSRF checking and auditing are applied
+by construction. `server/tests/architecture.test.js` fails the build if `axios`, `fetch` or
+`node:http` appears under `agents/`, `controllers/` or `routes/` — so the claim is mechanical, not
+aspirational. It has already caught a real hole (see the git history for `request.routes.js`).
+
+**Why the LLM never decides pass/fail.** If the model both writes the assertion and judges it, a
+green run means the model was self-consistent, not that the API is correct. `run_test_case`
+evaluates assertions deterministically and reports the expected and actual value for each one.
+
+**Risk classes, not per-tool prompts.** Grants are per *risk class* and per *host*, because asking
+someone to approve nine tools individually is theatre — they will click through it. Asking them to
+approve "this app may send attack-indicator payloads to `api.example.com`" is a decision a human
+can actually make. `network.probe` is never auto-granted under any configuration.
+
+### The nine tools
+
+| Tool | Risk class | What it does |
+| --- | --- | --- |
+| `http_request` | `network.read` | One HTTP request. Every other network tool builds on it. |
+| `run_test_case` | `network.read` | Executes a case and evaluates its assertions deterministically. |
+| `parse_openapi` | `local.compute` | YAML/JSON in, dereferenced operations out. No network. |
+| `probe_headers` | `network.read` | Security-header analysis. |
+| `probe_cors` | `network.read` | CORS misconfiguration, including wildcard-with-credentials. |
+| `probe_sqli` | `network.probe` | SQLi indicators against a benign baseline, with DB fingerprints. |
+| `probe_xss` | `network.probe` | Reflected-XSS indicators, escaping-aware. |
+| `probe_auth` | `network.probe` | Three requests — valid, **tampered**, anonymous. |
+| `deploy_service` | `deploy.write` | Render deployment. Grant **and** per-action confirmation. |
+
+The tampered request in `probe_auth` is the discriminator that kills the false positive: a public
+endpoint ignores a forged token, a broken one accepts it. Combined with the user's
+`intendedPublic` declaration, this is why the false-positive rate below is what it is.
 
 ---
 
-## Core Execution Sequence Diagram
-This unified sequence details the chronological execution flow when a user initiates a dynamic test generation and execution cycle.
+## Quickstart
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor QA as QA Engineer
-    participant Frontend as Vite User Interface
-    participant Gateway as Express API Gateway
-    participant AI as Llama-3 AI Engine
-    participant Runner as Execution Node
-    participant DB as MongoDB Data Lake
+Five minutes from a fresh clone, with no code edits.
 
-    QA->>Frontend: Constructs Base Endpoint Spec
-    Frontend->>Gateway: POST /api/ai/generate
-    Gateway->>AI: Prompts system via Groq
-    AI-->>Gateway: Returns JSON Test Suite Arrays
-    Gateway-->>Frontend: Renders Draft Tests
-
-    QA->>Frontend: Clicks 'Run Suite'
-    Frontend->>Gateway: Invokes Runner Route
-    Gateway->>Runner: Dispatches Payloads dynamically
-    Runner->>Runner: Performs strict Assertion Checks
-    Runner->>DB: Audits Request/Response Payloads
-    Runner-->>Frontend: Streams results to Latency Cards
-```
-
----
-
-## Agent State Machine (Flowchart)
-The internal state transition logic illustrating how the pipeline gracefully recovers from LLM validation failures.
-
-```mermaid
-stateDiagram-v2
-    [*] --> IngestTarget: User initiates Scan
-    
-    state "Primary Generation" as Primary {
-        IngestTarget --> PromptGroq
-        PromptGroq --> ParseJSON
-    }
-
-    ParseJSON --> ValidateSchema
-    ValidateSchema --> EngineExecution: Schema is Valid
-    ValidateSchema --> FallbackLogic: Malformed JSON Detected
-    
-    state "Fallback Handling" as Fallback {
-        FallbackLogic --> PromptPollinations
-        PromptPollinations --> StrictParse
-    }
-    
-    StrictParse --> EngineExecution: Recovered Successfully
-    StrictParse --> FailureFlag: Total Prompt Collapse
-    
-    EngineExecution --> MongoDB_Audit
-    FailureFlag --> MongoDB_Audit
-    MongoDB_Audit --> [*]
-```
-
----
-
-## Key Features & Observation Comparisons
-
-### Evaluative Comparison: Traditional QA vs AgentIQ Automation
-| Operational Metric | Traditional Manual Postman Suites | AgentIQ Automated Agents | Observation Effectiveness |
-|--------------------|-----------------------------------|--------------------------|---------------------------|
-| **Test Generation Latency** | 10 to 30 minutes per endpoint | **< 3 seconds** | **99% reduction** in manual boilerplate scaffolding. |
-| **Boundary Evaluation** | Biased by human imagination | **Stochastic LLM Distribution** | The AI introduces completely unanticipated edge-cases mathematically. |
-| **Security Verification** | Requires specialized SecOps personnel | **Autonomous Injectors** | AgentIQ natively fires standard SQLi/XSS fuzzes transparently to QA. |
-| **Failure Resolution** | Manual stack trace scrolling | **AI Synthesized Explanations** | LLM correlates exact assertion variables with server outputs dynamically. |
-
----
-
-## Visualizing Setup Scenarios 
-
-### The AI Test Runner Execution Architecture
-The Test Runner Desk serves as the primary execution context. An API Endpoint setup directly queries the integrated LLM models (Groq Llama-3/Pollinations) to formulate robust deterministic edge-case tests. The frontend then orchestrates sequential proxy payloads and traces the assertions natively.
-
-### The Security Assessment Scan Execution
-The security assessment intercepts active API connections and automatically fires SQL Injection fuzz payloads, displaying detected critical vulnerabilities based on reflection models within the DOM on the active security table.
----
-
-## Technical Stack Implementations
-The platform leverages modern architectures to guarantee highly concurrent web applications preventing intense machine-learning tasks from degrading the user experience.
-
-| Layer | Technology | Primary Purpose |
-|------|-----------|-----------------|
-| **Frontend** | React 18 / Vite 5 | SPA Presentation, fast HMR |
-| **State** | Zustand / TanStack Query | Stores sessions & auto-retries requests |
-| **Styling** | Tailwind CSS / Recharts | Component design & Analytics plotting |
-| **Backend** | Express / Node.js 22 | Routing requests & agentic delegation |
-| **LLM Tier** | Groq / Pollinations | Core inference & reasoning mechanisms |
-| **Auth** | Passport.js (Google) | JWT Session issuance & validation |
-| **Database** | MongoDB / Mongoose | Immutable run audits & credentials |
-
----
-
-## Command Center & Route Indexing
-- **`/` (Landing)**: The cinematic narrative overview and direct agent prompt trigger platform.
-- **`/dashboard`**: Real-time overview of the system, plotting pulses using Recharts and tracking system vulnerability modules.
-- **`/test`**: Fully-fledged execution desk allowing parameterized setups invoking dynamic generation arrays + split views for API Trace Results.
-- **`/security`**: Vulnerability detector sending XSS/SQLi injection payloads actively mapped out to a timeline.
-- **`/history`**: Filterable logs to review exact telemetry, assertion comparisons, and response differentials stored immutably.
-- **`/api-client`**: Manual API executor bypassing LLMs entirely for raw request modifications and baseline debugging.
-
-## Setup & Installation
-
-### Infrastructure Requirements
-- Node.js `v18.x` or higher
-- An active MongoDB connection string (local or Atlas)
+**Prerequisites:** Node 22 (`.nvmrc` pins it), a MongoDB connection string
+([Atlas M0](https://www.mongodb.com/cloud/atlas/register) is free), and one LLM provider.
 
 ```bash
-# 1. Clone & Set Up the Orchestrator
-git clone https://github.com/adarshcod30/AgentIQ-Platform.git
-cd AgentIQ-Platform
-
-# 2. Run Root Monorepo Installer
-npm run install:all
-
-# 3. Configure Local Execution Environment
-# Set Frontend Endpoints
-cd frontend
-cp .env.example .env
-
-# Set Backend API & DB Context
-cd ../backend
-cp .env.example .env 
-
-# Ensure you have set your MongoDB URI and API keys in backend/.env:
-# MONGO_URI=YOUR_DB_STRING
-# GROQ_API_KEY=YOUR_GROQ_KEY
-
-# 4. Spin Up Ecosystem
-cd ..
-npm run dev
-
-# ➜ Vite spins on http://localhost:5173
-# ➜ Express spins on http://localhost:3001
+git clone https://github.com/B-TechProject/AGENTIQ.git
+cd AGENTIQ
+nvm use            # or: fnm use
+npm install
 ```
 
-## API Endpoint Reference Map
-The Express backend effectively abstracts prompt manipulation via cleanly exposed REST surfaces.
+```bash
+cp .env.example .env
+```
 
-| Method | Endpoint | Execution Action | Payload |
-|--------|----------|----------|--------|
-| `POST` | `/api/ai/generate` | Generates JSON-form test suites utilizing specific LLMs given descriptions. | `{ url, method, description }` |
-| `POST` | `/api/tests/run` | Triggers deterministic test execution assertions calculating exactly latency distributions. | `{ url, method, body }` |
-| `POST` | `/api/security/scan` | Launches XSS / SQLi assessment triggers across boundaries. | `{ url }` |
-| `GET` | `/api/history` | Fetches JSON paginated run histories masking sensitive variables. | `<empty>` |
-| `GET` | `/api/auth/google` | Generates a redirectional hook to standard Passport.js infrastructure. | `<empty>` |
+Fill in the three that matter. Everything else has a working default:
 
-## Project File Structure Architecture
-```text
-AgentIQ/
-├── frontend/                 # React UI Layer
-│   ├── src/
-│   │   ├── components/       # Reusable UI parts & loaders
-│   │   ├── pages/            # 10+ core domain routes
-│   │   ├── services/         # Axios wrapper & endpoints
-│   │   └── store/            # Zustand persistent states
-├── backend/                  # API Engine Layer
-│   ├── src/
-│   │   ├── controllers/      # Route logic handlers
-│   │   ├── middlewares/      # Interceptors & JWT decoding
-│   │   ├── models/           # Mongoose object schemas
-│   │   ├── routes/           # Definition maps
-│   │   └── services/         # AI execution, test running, security
-└── package.json              # Orchestrates workspaces
+| Variable | How to get it |
+| --- | --- |
+| `MONGO_URI` | Atlas → Connect → Drivers. Add `0.0.0.0/0` to the IP access list. |
+| `JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` |
+| `BEDROCK_MODEL_ID` + AWS credentials | Or set `GROQ_API_KEY` instead — either provider works alone. |
+
+The server validates every variable at boot, prints a set/missing table, and **exits non-zero**
+rather than starting half-configured.
+
+```bash
+npm run dev
+```
+
+- API → <http://localhost:3001/api/health>
+- Web → <http://localhost:5173>
+
+Register an account, then point it at the bundled fixtures:
+
+```bash
+npm run fixtures
+```
+
+That starts a **deliberately vulnerable** API on `:4001` and a **hardened** one on `:4002` with an
+identical contract. Scan both. The first should light up; the second should report nothing.
+(Local fixtures live on loopback, which the egress guard blocks by design — set
+`ALLOW_PRIVATE_TARGETS=true` in `.env` for local work. It is refused outright when
+`NODE_ENV=production`, and it can never unlock the cloud metadata range.)
+
+```bash
+npm test            # 434 tests
+npm run evaluate    # regenerates docs/90_EVALUATION.md — costs about $0.004
 ```
 
 ---
 
-## Contributing
-We love to collaborate on extending this framework further. Contributions standard via fork & pull request branches alongside accompanying tests.
+## Evaluation
 
-This software is provided "AS IS", completely open-sourced to encourage iterative optimization against the complex nature of software regression and API lifecycle vulnerabilities.
+Full methodology and results: **[docs/90_EVALUATION.md](docs/90_EVALUATION.md)**, regenerated by
+`npm run evaluate`. Raw observations are committed in `evaluation/results/`.
+
+Measured against two fixture applications with identical routes, seed data and response
+contracts, differing only in their defects — so a finding on one and not the other can only be
+explained by the defect.
+
+| | Result |
+| --- | --- |
+| Security detection | **16 TP · 0 FP · 0 FN** across 48 labelled observations |
+| Precision / recall | **100% / 100%** |
+| **False positives on the hardened app** | **0%** |
+| Mutation score (spec-grounded) | **50.0%** — 3 repeats, range 50–50% |
+| Mutation score (description-only) | **43.3%** — range 40–50% |
+| Cost of a full evaluation run | **$0.004** · 522 audited tool invocations |
+
+**The grounding result is honest rather than flattering.** Grounded won 2 and tied 1 of 3 paired
+repeats — suggestive, in the direction the design predicted, and *not* significant at that sample
+size. The report says so.
+
+**Three mutants neither arm ever killed:** the generator never asserts `content-type`, never
+writes a 404 negative case, and never verifies filter correctness. That is a concrete limitation
+with a concrete fix, and it is in the report because a clean sweep would have been less
+informative.
+
+For contrast, the Semester 6 evaluation was five GET requests against `jsonplaceholder` with a
+near-tautological pass rate.
+
+---
+
+## API reference
+
+All routes are under `/api`. Everything except `/health` and `/auth/*` requires
+`Authorization: Bearer <token>`.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Liveness, Mongo status, and the **resolved** LLM chain per task. |
+| `POST` | `/auth/register` · `/auth/login` | Local auth. Google OAuth when configured. |
+| `GET` | `/mcp/tools` | The registry, with JSON Schemas **generated** from the Zod definitions. |
+| `GET` | `/mcp/audit` | Append-only audit log. Filter by outcome, tool, run. |
+| `GET`·`POST`·`DELETE` | `/mcp/grants` | Session grants, per risk class and host. |
+| `ALL` | `/mcp` | Streamable-HTTP MCP transport for external clients. |
+| `POST` | `/runs` | Start a run. Returns the persisted run in its terminal state. |
+| `GET` | `/runs` · `/runs/:id` · `/runs/stats` | History, detail, dashboard aggregates. |
+| `POST` | `/security/scan` | Scan without generating functional tests. |
+| `POST` | `/specs/import` | Import an OpenAPI spec by URL or upload. |
+| `POST` | `/request/send` | The API client — guarded, permission-checked, audited. |
+| `POST` | `/deployments` · `/deployments/preflight` | Deploy, or check whether a deploy would work. |
+
+There is also a stdio MCP entrypoint (`npm --workspace server run mcp:stdio`) that speaks the same
+JSON-RPC handshake Claude Desktop uses.
+
+---
+
+## Known limitations
+
+Stated plainly, because a tool that overstates what it checked is worse than one that checks less.
+
+1. **A clean scan is not a guarantee of security.** Six families are covered. Business-logic flaws,
+   IDOR, race conditions, SSRF *in the target*, and anything requiring multi-step state are not.
+2. **The rate-limit family reports an indicator, not a demonstration.** Eight successful requests
+   do not prove there is no limiter — a generous limit permits them too. It is scored MEDIUM for
+   exactly that reason.
+3. **`intendedPublic` is a user declaration, and it is load-bearing.** Mark a genuinely protected
+   endpoint as public and the authentication family will correctly report nothing.
+4. **Two fixture applications are not a population.** Every figure in the evaluation describes that
+   benchmark. It is a floor for "does this work at all", not an estimate of real-world performance.
+5. **The mutation score uses response-boundary mutants**, not source-level ones. That is the right
+   unit for a black-box API suite, but the numbers are not comparable to a classical mutation
+   testing paper.
+6. **Generation is stochastic.** Each evaluation arm runs three times and reports mean and range.
+   Three runs is enough to catch noise masquerading as a finding; it is not a significance test.
+7. **Post-deploy verification is partial by design.** It runs the functional suite plus the
+   read-only security families. `sqli`, `xss` and `auth` send attack payloads and are never
+   auto-granted, so they are skipped — and the UI says which and why.
+8. **Grants are in-memory and session-scoped.** They do not survive a restart. That is deliberate:
+   a permission that outlives the session it was given in is the unaccountable-automation problem
+   this project exists to avoid.
+9. **Only scan what you own or are authorised to test.** The tool sends real attack-indicator
+   payloads at whatever host you nominate.
+
+---
+
+## Project layout
+
+```
+server/          Express API, MCP registry and tools, agents, egress guard
+  src/mcp/       the tool layer — registry, permissions, audit, SSRF guard
+  src/agents/    testing, security, deployment — NO I/O, enforced by a test
+web/             React 19 + Vite 8 + Tailwind v4
+fixtures/        vulnerable-api and hardened-api — identical contract, by construction
+evaluation/      the harness that produces Chapter 4
+docs/            PRD, TRD, app flow, UI spec, AWS architecture, evaluation
+```
+
+## Documentation
+
+| | |
+| --- | --- |
+| [docs/01_PRD.md](docs/01_PRD.md) | What is being built and why, with acceptance criteria |
+| [docs/02_TRD.md](docs/02_TRD.md) | Technical design |
+| [docs/03_App_Flow.md](docs/03_App_Flow.md) | Screen-by-screen behaviour and the demo script |
+| [docs/05_AWS_ARCHITECTURE.md](docs/05_AWS_ARCHITECTURE.md) | Hosting, and the measured LLM routing decision |
+| [docs/90_EVALUATION.md](docs/90_EVALUATION.md) | Chapter 4 — generated, never hand-edited |
+| [PROGRESS.md](PROGRESS.md) | Build log, including defects found and how |
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
