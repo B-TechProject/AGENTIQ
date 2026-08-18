@@ -373,3 +373,57 @@ describe('IP pinning works for a hostname, not just an IP literal', () => {
     expect([4, 6]).toContain(positional.fam);
   });
 });
+
+
+/**
+ * THE ESCAPE HATCH MUST NOT UNLOCK THE METADATA RANGE.
+ *
+ * ALLOW_PRIVATE_TARGETS exists so the fixture apps on 127.0.0.1 can be tested.
+ * It used to lift EVERY address rule, including 169.254.0.0/16 — so with the
+ * flag on, a user-supplied
+ * `http://169.254.169.254/latest/meta-data/iam/security-credentials/` was
+ * fetched by the server and its body handed back. On a laptop that fails to
+ * route, which is exactly why it went unnoticed; on App Runner it returns the
+ * task role's credentials.
+ *
+ * config/env.js refuses the flag when NODE_ENV=production, but that only checks
+ * the value read at BOOT — this suite and the evaluation harness set
+ * env.ALLOW_PRIVATE_TARGETS at runtime and bypass it completely. So the rule
+ * has to be one the flag cannot reach.
+ */
+describe('ALLOW_PRIVATE_TARGETS never unlocks the cloud metadata range', () => {
+  it('still refuses 169.254.169.254 with the hatch open', async () => {
+    await withPrivateTargets(async () => {
+      await expect(resolveAndValidate('169.254.169.254')).rejects.toMatchObject({
+        code: EGRESS_ERROR.BLOCKED_IP,
+      });
+    });
+  });
+
+  it('still refuses IPv6 link-local with the hatch open', async () => {
+    await withPrivateTargets(async () => {
+      await expect(resolveAndValidate('fe80::1')).rejects.toMatchObject({
+        code: EGRESS_ERROR.BLOCKED_IP,
+      });
+    });
+  });
+
+  it('refuses it through fetchGuarded too, and records an SSRF block', async () => {
+    await withPrivateTargets(async () => {
+      const err = await fetchGuarded('http://169.254.169.254/latest/meta-data/')
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(EgressError);
+      // isSsrfBlock is what makes the audit row read `blocked_ssrf` rather than
+      // a generic error — those rows are the most persuasive evidence the
+      // guard is live.
+      expect(err.isSsrfBlock).toBe(true);
+    });
+  });
+
+  it('but STILL permits loopback and private ranges, which is the point of the hatch', async () => {
+    await withPrivateTargets(async () => {
+      await expect(resolveAndValidate('127.0.0.1')).resolves.toMatchObject({ address: '127.0.0.1' });
+      await expect(resolveAndValidate('10.0.0.5')).resolves.toMatchObject({ address: '10.0.0.5' });
+    });
+  });
+});

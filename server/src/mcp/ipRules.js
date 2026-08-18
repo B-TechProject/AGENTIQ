@@ -25,6 +25,27 @@ export const BLOCK_REASONS = {
   UNIQUE_LOCAL: 'unique local address (RFC 4193)',
 };
 
+/**
+ * Reasons that ALLOW_PRIVATE_TARGETS must never be able to unlock.
+ *
+ * The escape hatch exists so the fixture apps on 127.0.0.1 can be tested. No
+ * fixture lives in the cloud metadata range, so extending the exemption to it
+ * bought nothing and cost everything: with the flag on, a user-supplied
+ * `http://169.254.169.254/latest/meta-data/iam/security-credentials/` was
+ * fetched by the server and its body returned to the caller. On a laptop that
+ * fails to route; on App Runner it hands over the task role's credentials.
+ *
+ * config/env.js already refuses the flag when NODE_ENV=production, but that
+ * check only covers the value read at boot — tests and the evaluation harness
+ * set `env.ALLOW_PRIVATE_TARGETS` directly at runtime and bypass it entirely.
+ * A rule that cannot be switched off is the only kind worth relying on here.
+ */
+export const NEVER_ALLOWED = new Set([BLOCK_REASONS.LINK_LOCAL]);
+
+/** True when this verdict must hold even with ALLOW_PRIVATE_TARGETS on. */
+export const isNeverAllowed = (verdict) =>
+  Boolean(verdict?.blocked) && NEVER_ALLOWED.has(verdict.reason);
+
 function ipv4ToInt(ip) {
   const parts = ip.split('.').map(Number);
   if (parts.length !== 4 || parts.some((p) => !Number.isInteger(p) || p < 0 || p > 255)) return null;

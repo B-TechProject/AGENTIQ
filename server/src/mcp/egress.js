@@ -25,7 +25,7 @@ import dns from 'node:dns/promises';
 import http from 'node:http';
 import https from 'node:https';
 import { isIP } from 'node:net';
-import { classifyIp, isBlockedHostname } from './ipRules.js';
+import { classifyIp, isBlockedHostname, isNeverAllowed } from './ipRules.js';
 import { env } from '../config/env.js';
 
 export const EGRESS_ERROR = {
@@ -118,7 +118,9 @@ export async function resolveAndValidate(rawHostname, { lookup = dns.lookup } = 
   // A literal IP in the URL skips DNS but still gets classified.
   if (isIP(hostname)) {
     const verdict = classifyIp(hostname);
-    if (verdict.blocked && !privateTargetsAllowed()) {
+    // isNeverAllowed outranks the escape hatch: the cloud metadata range stays
+    // blocked even when private targets are permitted for fixture testing.
+    if (verdict.blocked && (!privateTargetsAllowed() || isNeverAllowed(verdict))) {
       throw new EgressError(
         EGRESS_ERROR.BLOCKED_IP,
         `Refused ${hostname}: ${verdict.reason}. Private and link-local addresses are blocked to prevent SSRF.`,
@@ -143,17 +145,15 @@ export async function resolveAndValidate(rawHostname, { lookup = dns.lookup } = 
     throw new EgressError(EGRESS_ERROR.DNS_FAILED, `No addresses for ${hostname}`, { hostname });
   }
 
-  if (!privateTargetsAllowed()) {
-    for (const record of records) {
-      const verdict = classifyIp(record.address);
-      if (verdict.blocked) {
-        throw new EgressError(
-          EGRESS_ERROR.BLOCKED_IP,
-          `Refused ${hostname} — it resolves to ${record.address} (${verdict.reason}). ` +
-            'Private and link-local addresses are blocked to prevent SSRF.',
-          { hostname, ip: record.address, reason: verdict.reason },
-        );
-      }
+  for (const record of records) {
+    const verdict = classifyIp(record.address);
+    if (verdict.blocked && (!privateTargetsAllowed() || isNeverAllowed(verdict))) {
+      throw new EgressError(
+        EGRESS_ERROR.BLOCKED_IP,
+        `Refused ${hostname} — it resolves to ${record.address} (${verdict.reason}). ` +
+          'Private and link-local addresses are blocked to prevent SSRF.',
+        { hostname, ip: record.address, reason: verdict.reason },
+      );
     }
   }
 

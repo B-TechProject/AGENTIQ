@@ -17,7 +17,25 @@ import { describe, it, expect } from 'vitest';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const AGENTS_DIR = path.resolve(import.meta.dirname, '../src/agents');
+const SRC = path.resolve(import.meta.dirname, '../src');
+
+/**
+ * Trees that must contain NO HTTP client of their own.
+ *
+ * agents/ was the original scope. controllers/ and routes/ were added in
+ * Phase 15 after a live SSRF hole was found in exactly the place the guard was
+ * not looking: controllers/request.controller.js passed a user-supplied URL
+ * straight to axios, so POST /api/request/send would fetch
+ * http://169.254.169.254/latest/meta-data/... and return the body. Guarding
+ * only the agents while a route did raw I/O defended the claim in the one place
+ * it was already true.
+ *
+ * services/ is deliberately NOT here: services/llm.js talks to fixed provider
+ * endpoints that no user supplies, which is a different risk entirely. The rule
+ * being enforced is "no user-controlled URL reaches an HTTP client", and these
+ * three trees are where user input arrives.
+ */
+const GUARDED_TREES = ['agents', 'controllers', 'routes'];
 
 /** Anything that can open a socket or issue a request. */
 const FORBIDDEN = [
@@ -55,16 +73,17 @@ function stripComments(source) {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
 
-describe('architecture: agents perform no I/O', () => {
-  it('server/src/agents/** contains no direct network or process calls', async () => {
-    const files = await walk(AGENTS_DIR);
+describe('architecture: no user-controlled URL reaches an HTTP client', () => {
+  it.each(GUARDED_TREES)('server/src/%s/** contains no direct network or process calls', async (tree) => {
+    const dir = path.join(SRC, tree);
+    const files = await walk(dir);
     const violations = [];
 
     for (const file of files) {
       const source = stripComments(await readFile(file, 'utf8'));
       for (const { name, pattern } of FORBIDDEN) {
         if (pattern.test(source)) {
-          violations.push(`${path.relative(AGENTS_DIR, file)} uses ${name}`);
+          violations.push(`${tree}/${path.relative(dir, file)} uses ${name}`);
         }
       }
     }
@@ -72,7 +91,7 @@ describe('architecture: agents perform no I/O', () => {
     expect(
       violations,
       violations.length
-        ? '\n\nAgents must not perform I/O. They may only call MCP tools.\n' +
+        ? '\n\nThis tree must not perform I/O. It may only call MCP tools.\n' +
             'Move the call into a tool under server/src/mcp/tools/ so it is\n' +
             'schema-validated, permission-checked, audited, and SSRF-guarded.\n\n' +
             violations.map((v) => `  - ${v}`).join('\n') + '\n'
