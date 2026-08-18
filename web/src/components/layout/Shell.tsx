@@ -25,6 +25,7 @@ import {
 import { useState } from 'react';
 import { cn } from '@/lib/cn';
 import { apiGet } from '@/services/api';
+import { VerifyBanner } from './VerifyBanner';
 import { useAuthStore } from '@/store/auth';
 import { Button } from '@/components/ui';
 import type { HealthStatus } from '@/types';
@@ -183,6 +184,10 @@ export function Shell() {
             </div>
           )}
         </header>
+
+        {/* Directly under the header, above every page. Renders nothing once
+            the address is verified. */}
+        <VerifyBanner />
 
         <main className="mx-auto max-w-[1280px] px-6 py-6 xl:px-8">
           <Outlet />

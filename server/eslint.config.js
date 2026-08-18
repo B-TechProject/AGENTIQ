@@ -27,6 +27,8 @@ export default [
         clearInterval: 'readonly',
         fetch: 'readonly',
         AbortController: 'readonly',
+        // Node 18+ global; used for request timeouts in services/mailer.service.js.
+        AbortSignal: 'readonly',
         Buffer: 'readonly',
         URLSearchParams: 'readonly',
         TextEncoder: 'readonly',

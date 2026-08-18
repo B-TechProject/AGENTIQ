@@ -86,6 +86,15 @@ export const envSchema = z
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
 
+    // ── Email (optional — absence disables verification mail, not the app) ───
+    // Resend is the default driver: free tier, and its shared onboarding@
+    // sender works with no domain set up, which matters for a demo where an
+    // examiner may register with their own address.
+    MAIL_DRIVER: z.enum(['resend', 'smtp', 'console']).optional(),
+    RESEND_API_KEY: z.string().optional(),
+    SMTP_URL: z.string().optional(),
+    MAIL_FROM: z.string().optional(),
+
     // ── Deployment (optional) ────────────────────────────────────────────────
     RENDER_API_KEY: z.string().optional(),
     // Overridable so the deployment tests can drive a local fake control plane
@@ -118,11 +127,13 @@ export const OPTIONAL_FEATURE_VARS = {
   AWS_S3_BUCKET: 'S3 spec & artifact storage',
   AWS_SECRETS_ID: 'Secrets Manager',
   RENDER_API_KEY: 'Deployment agent',
+  RESEND_API_KEY: 'Verification email',
 };
 
 const SECRET_KEYS = new Set([
   'JWT_SECRET', 'MONGO_URI', 'GROQ_API_KEY',
   'GOOGLE_CLIENT_SECRET', 'GOOGLE_CLIENT_ID', 'RENDER_API_KEY',
+  'RESEND_API_KEY', 'SMTP_URL',
 ]);
 
 /** Never print a secret. Show only enough to confirm the right value is loaded. */
@@ -206,6 +217,7 @@ export const ENV_KEYS = [
   'LLM_PRIMARY', 'LLM_FALLBACK',
   'AWS_REGION', 'AWS_S3_BUCKET', 'AWS_SECRETS_ID', 'BEDROCK_MODEL_ID',
   'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',
+  'MAIL_DRIVER', 'RESEND_API_KEY', 'SMTP_URL', 'MAIL_FROM',
   'RENDER_API_KEY', 'RENDER_API_BASE', 'EGRESS_TIMEOUT_MS', 'EGRESS_MAX_BYTES',
   'EGRESS_RPS_PER_HOST', 'ALLOW_PRIVATE_TARGETS',
 ];

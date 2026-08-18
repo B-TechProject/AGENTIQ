@@ -13,6 +13,10 @@ import { User } from '../models/User.js';
 import { generateToken, cookieOptions } from '../utils/token.js';
 import { ok, fail, ApiError } from '../utils/http.js';
 import { env } from '../config/env.js';
+import {
+  issueVerification, consumeVerification, VERIFY_RESULT, mailStatus,
+} from '../services/verification.service.js';
+import { logger } from '../lib/logger.js';
 
 const registerSchema = z
   .object({
@@ -57,8 +61,86 @@ export async function registerUser(req, res) {
 
   const token = generateToken(user);
   res.cookie('token', token, cookieOptions());
+
+  /**
+   * Issued but NOT awaited as a precondition of success. Registration has
+   * already happened; a mail provider outage must not roll it back or return a
+   * 500 to someone whose account now exists. The response reports honestly
+   * whether the message went out.
+   */
+  const verification = await issueVerification(user).catch((err) => {
+    logger.error({ err: err.message }, 'could not issue verification token');
+    return { sent: false, driver: null, url: null, revealed: false };
+  });
+
   // toJSON strips passwordHash; see models/User.js.
-  return ok(res, { user: user.toJSON(), token }, 201);
+  return ok(res, {
+    user: user.toJSON(),
+    token,
+    verification: {
+      required: true,
+      emailSent: verification.sent,
+      // Non-null only outside production AND only when mail is unconfigured —
+      // see mayRevealToken() in verification.service.js.
+      devVerificationUrl: verification.url,
+    },
+  }, 201);
+}
+
+/**
+ * POST /api/auth/verify — consume a token.
+ *
+ * Deliberately a POST. A GET would be followed by mail clients and link
+ * scanners that prefetch URLs, silently burning single-use tokens before the
+ * recipient ever clicks. The emailed link points at the FRONTEND, which posts
+ * here.
+ */
+export async function verifyEmail(req, res) {
+  const token = String(req.body?.token ?? req.query?.token ?? '');
+  const { result, user } = await consumeVerification(token);
+
+  if (result === VERIFY_RESULT.VERIFIED || result === VERIFY_RESULT.ALREADY_VERIFIED) {
+    return ok(res, {
+      result,
+      alreadyVerified: result === VERIFY_RESULT.ALREADY_VERIFIED,
+      user: user ? user.toJSON() : null,
+    });
+  }
+
+  if (result === VERIFY_RESULT.EXPIRED) {
+    return fail(res, 410, 'VERIFICATION_EXPIRED',
+      'This link has expired. Sign in and request a new one.');
+  }
+  return fail(res, 400, 'VERIFICATION_INVALID',
+    'This link is not valid. It may already have been used.');
+}
+
+/**
+ * POST /api/auth/verify/resend — issue a fresh token.
+ *
+ * Authenticated, so it resends for the signed-in account only. That removes
+ * the enumeration question entirely: there is no email parameter to probe
+ * with, and no way to ask this endpoint about an address you cannot already
+ * sign in as.
+ */
+export async function resendVerification(req, res) {
+  const user = req.user;
+
+  if (user.emailVerified) {
+    return ok(res, { alreadyVerified: true, emailSent: false });
+  }
+
+  const verification = await issueVerification(user).catch((err) => {
+    logger.error({ err: err.message }, 'resend failed');
+    return { sent: false, url: null };
+  });
+
+  return ok(res, {
+    alreadyVerified: false,
+    emailSent: verification.sent,
+    devVerificationUrl: verification.url,
+    mail: mailStatus(),
+  });
 }
 
 export async function loginUser(req, res) {
@@ -113,6 +195,21 @@ export async function googleCallback(req, res) {
   // Sem 6 collections were merged: one person, one user, many sign-in methods.
   user.linkProvider({ provider: 'google', providerId: profile.id, email });
   if (!user.avatarUrl && profile.photos?.[0]?.value) user.avatarUrl = profile.photos[0].value;
+
+  /**
+   * Google has already proved ownership of this address, so re-proving it is
+   * friction with no security value.
+   *
+   * The check is on Google's OWN verified flag rather than on the mere presence
+   * of an email: a Workspace or unverified account can carry an address Google
+   * has not confirmed, and trusting that would let someone verify an address
+   * they do not own by signing in with a doctored profile.
+   */
+  const googleVerified = profile?.emails?.[0]?.verified;
+  if (!user.emailVerified && googleVerified !== false) {
+    user.emailVerified = true;
+    user.emailVerifiedAt = new Date();
+  }
   await user.save();
 
   const token = generateToken(user);

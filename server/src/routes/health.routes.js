@@ -13,6 +13,7 @@ import { mongoStatus } from '../lib/db.js';
 import { isGoogleOAuthConfigured } from '../config/passport.js';
 import { env } from '../config/env.js';
 import { providerOrder, modelFor, TASK } from '../services/llm.js';
+import { mailStatus } from '../services/verification.service.js';
 import { ok } from '../utils/http.js';
 
 const router = Router();
@@ -56,6 +57,8 @@ router.get('/health', (req, res) => {
     mongo,
     llmProviders: llmProviders(),
     llmChain: llmChain(),
+    // Whether verification mail can actually be delivered, and by what.
+    mail: mailStatus(),
     googleOAuth: isGoogleOAuthConfigured() ? 'configured' : 'disabled',
     env: env.NODE_ENV,
   });

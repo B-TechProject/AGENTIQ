@@ -7,6 +7,8 @@ import { Shell } from '@/components/layout/Shell';
 import { RequireAuth } from '@/components/layout/RequireAuth';
 import { ComponentGallery } from '@/pages/ComponentGallery';
 import { DeployPage } from '@/pages/DeployPage';
+import { GoogleSuccessPage } from '@/pages/GoogleSuccessPage';
+import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { TestRunnerPage } from '@/pages/TestRunnerPage';
 import { RunDetailPage } from '@/pages/RunDetailPage';
@@ -23,6 +25,10 @@ import { ApiClientPage } from '@/pages/ApiClientPage';
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/signup', element: <LoginPage signup /> },
+  // Both are PUBLIC on purpose: the Google redirect arrives before a session
+  // exists, and a verification link is often opened on a different device.
+  { path: '/google-success', element: <GoogleSuccessPage /> },
+  { path: '/verify', element: <VerifyEmailPage /> },
 
   // Development route: renders the component library, no data.
   { path: '/dev/components', element: <ComponentGallery /> },

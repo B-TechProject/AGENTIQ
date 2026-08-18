@@ -52,6 +52,21 @@ const userSchema = new mongoose.Schema(
 
     avatarUrl: { type: String, default: '' },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
+
+    /**
+     * Email verification.
+     *
+     * Soft by design: an unverified user can sign in and use the product, and
+     * the UI shows a persistent banner. A demo that a spam filter can lock you
+     * out of is worse than one where verification is advisory — and saying so
+     * plainly is better than implying an enforcement that is not there.
+     *
+     * A Google sign-up arrives ALREADY verified when Google says the address is
+     * verified: re-proving ownership of an address the identity provider has
+     * already confirmed is friction with no security value.
+     */
+    emailVerified: { type: Boolean, default: false },
+    emailVerifiedAt: { type: Date, default: null },
   },
   {
     timestamps: true,

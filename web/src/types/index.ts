@@ -23,6 +23,9 @@ export interface User {
   displayName: string;
   avatarUrl?: string;
   role: 'user' | 'admin';
+  /** Soft by design — an unverified user can sign in and sees a banner. */
+  emailVerified: boolean;
+  emailVerifiedAt?: string | null;
 }
 
 export interface AssertionResult {
@@ -155,6 +158,7 @@ export interface HealthStatus {
     hasFallback: boolean;
     models: Record<string, Record<string, string>>;
   };
+  mail: { configured: boolean; driver: string };
   googleOAuth: string;
   env: string;
 }
