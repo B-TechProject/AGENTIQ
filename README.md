@@ -257,6 +257,7 @@ docs/            PRD, TRD, app flow, UI spec, AWS architecture, evaluation
 | [docs/03_App_Flow.md](docs/03_App_Flow.md) | Screen-by-screen behaviour and the demo script |
 | [docs/05_AWS_ARCHITECTURE.md](docs/05_AWS_ARCHITECTURE.md) | Hosting, and the measured LLM routing decision |
 | [docs/06_SETUP_AUTH.md](docs/06_SETUP_AUTH.md) | Google OAuth and verification email, step by step |
+| [docs/07_DEPLOYMENT_CHECKLIST.md](docs/07_DEPLOYMENT_CHECKLIST.md) | What was verified before deploying, and what the host must set |
 | [docs/90_EVALUATION.md](docs/90_EVALUATION.md) | Chapter 4 — generated, never hand-edited |
 | [PROGRESS.md](PROGRESS.md) | Build log, including defects found and how |
 

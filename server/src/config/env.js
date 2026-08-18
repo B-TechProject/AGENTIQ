@@ -136,6 +136,37 @@ export const OPTIONAL_FEATURE_VARS = {
   GMAIL_APP_PASSWORD: 'Verification email over Gmail SMTP',
 };
 
+/**
+ * Optional features, and what actually enables each one.
+ *
+ * `mode: 'any'` matters. The previous version derived this list per VARIABLE,
+ * so a server sending verification mail perfectly well through Gmail SMTP was
+ * announced at boot as "Disabled: Verification email" — purely because
+ * RESEND_API_KEY happened to be absent. Telling an operator a working feature
+ * is off is the same class of mistake as the LLM chain silently resolving to a
+ * provider nobody chose: the startup output has to describe reality.
+ */
+export const OPTIONAL_FEATURES = [
+  { name: 'Google OAuth sign-in', mode: 'all', requires: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] },
+  { name: 'Groq LLM provider', mode: 'all', requires: ['GROQ_API_KEY'] },
+  { name: 'Bedrock LLM provider', mode: 'all', requires: ['BEDROCK_MODEL_ID'] },
+  { name: 'S3 spec & artifact storage', mode: 'all', requires: ['AWS_S3_BUCKET'] },
+  { name: 'Secrets Manager', mode: 'all', requires: ['AWS_SECRETS_ID'] },
+  { name: 'Deployment agent', mode: 'all', requires: ['RENDER_API_KEY'] },
+  // Any ONE of three drivers is enough to send mail.
+  { name: 'Verification email', mode: 'any', requires: ['RESEND_API_KEY', 'GMAIL_APP_PASSWORD', 'SMTP_URL'] },
+];
+
+/** Features that genuinely cannot work with the given environment. */
+export function disabledFeatures(source = process.env) {
+  const present = (k) => Boolean(source[k]);
+  return OPTIONAL_FEATURES
+    .filter(({ mode, requires }) => (mode === 'any'
+      ? !requires.some(present)
+      : !requires.every(present)))
+    .map(({ name }) => name);
+}
+
 const SECRET_KEYS = new Set([
   'JWT_SECRET', 'MONGO_URI', 'GROQ_API_KEY',
   'GOOGLE_CLIENT_SECRET', 'GOOGLE_CLIENT_ID', 'RENDER_API_KEY',
@@ -240,9 +271,7 @@ export function loadEnv({ exit = true, log = console } = {}) {
   log.info?.('\nAGENTIQ — environment');
   for (const line of formatEnvTable(process.env, result.env)) log.info?.(line);
 
-  const disabled = Object.entries(OPTIONAL_FEATURE_VARS)
-    .filter(([k]) => !process.env[k])
-    .map(([, feature]) => feature);
+  const disabled = disabledFeatures(process.env);
   if (disabled.length) {
     log.info?.(`\n  Disabled (optional config absent): ${[...new Set(disabled)].join(', ')}`);
   }

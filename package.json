@@ -24,7 +24,8 @@
     "migrate:users": "npm --workspace server run migrate:users",
     "evaluate": "node evaluation/run.js",
     "test:server": "npm --workspace server run test",
-    "test:fixtures": "npm --workspace fixtures run test"
+    "test:fixtures": "npm --workspace fixtures run test",
+    "start": "npm --workspace server run start"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.10",
