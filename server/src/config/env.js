@@ -65,6 +65,8 @@ export const envSchema = z
     // access to many model families through one interface, so a second bespoke
     // provider key earns nothing. See docs/05_AWS_ARCHITECTURE.md.
     GROQ_API_KEY: z.string().optional(),
+    // Providers retire models on their own schedule; keep this swappable.
+    GROQ_MODEL: z.string().optional(),
     LLM_PRIMARY: z.enum(['groq', 'bedrock']).default('groq'),
     LLM_FALLBACK: z.enum(['groq', 'bedrock']).default('bedrock'),
 
@@ -197,7 +199,7 @@ export function formatEnvTable(source = process.env, parsed = null) {
 export const ENV_KEYS = [
   'NODE_ENV', 'PORT', 'MONGO_URI', 'JWT_SECRET', 'CORS_ORIGIN',
   'APP_BASE_URL', 'API_BASE_URL', 'GROQ_API_KEY',
-  'LLM_PRIMARY', 'LLM_FALLBACK',
+  'GROQ_MODEL', 'LLM_PRIMARY', 'LLM_FALLBACK',
   'AWS_REGION', 'AWS_S3_BUCKET', 'AWS_SECRETS_ID', 'BEDROCK_MODEL_ID',
   'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',
   'RENDER_API_KEY', 'RENDER_API_BASE', 'EGRESS_TIMEOUT_MS', 'EGRESS_MAX_BYTES',

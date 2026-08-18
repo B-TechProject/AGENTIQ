@@ -40,6 +40,19 @@ export class LlmError extends Error {
   }
 }
 
+/** Longest we will sit waiting out a single provider rate limit. */
+export const RATE_LIMIT_MAX_WAIT_MS = 30_000;
+/**
+ * How many times to wait out a rate limit before abandoning a provider.
+ *
+ * One retry was not enough: a free tier that limits tokens-per-minute will
+ * refuse several calls in a row during a burst, and an evaluation run makes
+ * eight generation calls back to back. Three bounded waits cover a burst
+ * without letting a genuinely exhausted quota hang the process indefinitely.
+ */
+export const RATE_LIMIT_MAX_RETRIES = 3;
+const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
+
 export const LLM_ERROR = {
   NO_PROVIDER: 'LLM_NO_PROVIDER',
   PROVIDER_FAILED: 'LLM_PROVIDER_FAILED',
@@ -48,8 +61,17 @@ export const LLM_ERROR = {
   RATE_LIMITED: 'LLM_RATE_LIMITED',
 };
 
-/** Published per-million-token prices, for the cost column in Chapter 4. */
+/**
+ * Published per-million-token list prices, for the cost column in Chapter 4.
+ *
+ * A model missing from this table yields `null` rather than a guess, and the
+ * report prints "unknown" — an invented cost would be worse than no cost.
+ */
 export const PRICING = {
+  'openai/gpt-oss-20b': { in: 0.1, out: 0.5 },
+  'openai/gpt-oss-120b': { in: 0.15, out: 0.75 },
+  'qwen/qwen3.6-27b': { in: 0.29, out: 0.59 },
+  // Retired by Groq in 2026. Kept so historical runs still cost out.
   'llama-3.1-8b-instant': { in: 0.05, out: 0.08 },
   'apac.amazon.nova-lite-v1:0': { in: 0.06, out: 0.24 },
   'apac.amazon.nova-micro-v1:0': { in: 0.035, out: 0.14 },
@@ -64,7 +86,40 @@ export function estimateCostUsd(model, inputTokens, outputTokens) {
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
-export const GROQ_MODEL = 'llama-3.1-8b-instant';
+/**
+ * CONFIGURABLE ON PURPOSE.
+ *
+ * This was pinned to a literal, and Groq retired that model — which broke
+ * generation everywhere with an opaque 404. Providers deprecate models on their
+ * own schedule, so the model id is an environment variable with a current
+ * default, and swapping it is a config change rather than a code change.
+ */
+/**
+ * Default model.
+ *
+ * 20b proved unreliable at this schema — malformed cases, over-long batches and
+ * occasional invalid JSON, each of which cost a full generation attempt. 120b
+ * holds the shape far more consistently and the workload is small enough that
+ * the price difference is fractions of a cent per evaluation run.
+ */
+export const GROQ_MODEL = 'openai/gpt-oss-120b';
+export const groqModel = () => env.GROQ_MODEL ?? GROQ_MODEL;
+
+/**
+ * Reasoning models spend output tokens THINKING before they answer, and that
+ * budget comes out of the same max_tokens allowance as the answer.
+ *
+ * With the default effort, gpt-oss routinely spent ~1,300 tokens reasoning and
+ * then truncated mid-object, so Groq's JSON-mode validator rejected the whole
+ * completion with an opaque 400 ("Failed to validate JSON"). Raising max_tokens
+ * is not available as a fix: 8,000 exceeds the free tier's per-request size cap.
+ *
+ * Low effort more than halves the reasoning spend AND returns more actual JSON,
+ * which is the right trade for a task whose output is a fixed schema rather
+ * than an argument.
+ */
+const REASONING_MODELS = /gpt-oss|qwen3/i;
+export const isReasoningModel = (model) => REASONING_MODELS.test(model);
 
 /** Groq — OpenAI-compatible chat completions with JSON mode. */
 async function callGroq({ system, prompt, maxTokens, temperature, signal }) {
@@ -75,7 +130,7 @@ async function callGroq({ system, prompt, maxTokens, temperature, signal }) {
     res = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
       {
-        model: GROQ_MODEL,
+        model: groqModel(),
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: prompt },
@@ -83,6 +138,7 @@ async function callGroq({ system, prompt, maxTokens, temperature, signal }) {
         response_format: { type: 'json_object' },
         temperature,
         max_tokens: maxTokens,
+        ...(isReasoningModel(groqModel()) ? { reasoning_effort: 'low' } : {}),
       },
       {
         headers: { Authorization: `Bearer ${env.GROQ_API_KEY}` },
@@ -92,19 +148,33 @@ async function callGroq({ system, prompt, maxTokens, temperature, signal }) {
     );
   } catch (err) {
     if (err.response?.status === 429) {
-      throw new LlmError(LLM_ERROR.RATE_LIMITED, 'Groq rate limit reached', { provider: 'groq' });
+      // Surface how long the provider asked us to wait, so the caller can
+      // actually honour it instead of failing a whole evaluation run over a
+      // transient free-tier limit.
+      const header = err.response.headers?.['retry-after'];
+      const retryAfterMs = header ? Math.ceil(Number(header) * 1000) : null;
+      throw new LlmError(
+        LLM_ERROR.RATE_LIMITED,
+        `Groq rate limit reached${retryAfterMs ? ` (retry after ${Math.ceil(retryAfterMs / 1000)}s)` : ''}`,
+        { provider: 'groq', retryAfterMs: Number.isFinite(retryAfterMs) ? retryAfterMs : null },
+      );
     }
-    throw new LlmError(LLM_ERROR.PROVIDER_FAILED, `Groq request failed: ${err.message}`, {
-      provider: 'groq',
-      status: err.response?.status,
-    });
+    // Include what the provider actually said. "Request failed with status
+    // code 400" is useless on its own; the body names the offending field.
+    const detail = err.response?.data?.error?.message
+      ?? (typeof err.response?.data === 'string' ? err.response.data.slice(0, 300) : null);
+    throw new LlmError(
+      LLM_ERROR.PROVIDER_FAILED,
+      `Groq request failed (${err.response?.status ?? 'no status'})${detail ? `: ${detail}` : `: ${err.message}`}`,
+      { provider: 'groq', status: err.response?.status, detail },
+    );
   }
 
   const usage = res.data?.usage ?? {};
   return {
     text: res.data?.choices?.[0]?.message?.content ?? '',
     provider: 'groq',
-    model: GROQ_MODEL,
+    model: groqModel(),
     inputTokens: usage.prompt_tokens ?? 0,
     outputTokens: usage.completion_tokens ?? 0,
   };
@@ -212,6 +282,7 @@ export async function generateJSON({
     const call = PROVIDERS[name];
     let lastText = null;
     let lastIssue = null;
+    let rateLimitWaits = 0;
 
     for (let attempt = 0; attempt <= maxRepairs; attempt += 1) {
       // The repair attempt shows the model its own output and the specific
@@ -227,6 +298,18 @@ export async function generateJSON({
       try {
         raw = await call({ system, prompt: effectivePrompt, maxTokens, temperature, signal });
       } catch (err) {
+        // A rate limit is a "come back shortly", not a failure of this
+        // provider. Wait once — honouring Retry-After when the provider sent
+        // one — before giving up on it.
+        if (err.code === LLM_ERROR.RATE_LIMITED && rateLimitWaits < RATE_LIMIT_MAX_RETRIES) {
+          rateLimitWaits += 1;
+          const waitMs = Math.min(err.details?.retryAfterMs ?? 5_000, RATE_LIMIT_MAX_WAIT_MS);
+          logger.warn({ provider: name, waitMs, attempt: rateLimitWaits },
+            'LLM rate limited; waiting before retry');
+          await sleep(waitMs);
+          attempt -= 1; // this attempt never happened
+          continue;
+        }
         failures.push(`${name}: ${err.message}`);
         break; // try the next provider
       }
