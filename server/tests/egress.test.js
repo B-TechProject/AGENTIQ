@@ -302,3 +302,74 @@ describe('ALLOW_PRIVATE_TARGETS escape hatch', () => {
     }
   });
 });
+
+
+/**
+ * REGRESSION — the IP-pinning path, exercised through a real HOSTNAME.
+ *
+ * Every other test in this suite targets 127.0.0.1, and Node skips the `lookup`
+ * callback entirely for an IP literal. That meant the pinning override — the
+ * mechanism that defeats DNS rebinding, and the single most important line in
+ * egress.js — was never actually executed by the suite.
+ *
+ * It was wrong. Node >= 20 enables autoSelectFamily by default, which calls a
+ * custom lookup with { all: true } and expects an ARRAY of { address, family };
+ * the override answered with the older positional convention, so every request
+ * to a hostname failed with "Invalid IP address: undefined".
+ *
+ * This block uses its own DUAL-STACK server, because "localhost" resolves to
+ * ::1 first on macOS and to 127.0.0.1 first elsewhere — binding one family
+ * would make the test pass or fail depending on the machine.
+ */
+describe('IP pinning works for a hostname, not just an IP literal', () => {
+  let hostServer;
+  let hostBase;
+
+  beforeAll(async () => {
+    hostServer = http.createServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ hello: 'world' }));
+    });
+    // No host argument: binds dual-stack, so either resolution order works.
+    await new Promise((r) => hostServer.listen(0, r));
+    hostBase = `http://localhost:${hostServer.address().port}`;
+  });
+
+  afterAll(() => { hostServer?.close(); });
+
+  it('resolves, pins and connects when the URL carries a hostname', async () => {
+    await withPrivateTargets(async () => {
+      const res = await fetchGuarded(`${hostBase}/ok`);
+      expect(res.status).toBe(200);
+      expect(JSON.parse(res.body)).toEqual({ hello: 'world' });
+      // Proof a pin was applied rather than Node doing its own lookup.
+      expect(['127.0.0.1', '::1']).toContain(res.ip);
+    });
+  });
+
+  it('answers the autoSelectFamily convention with an array', async () => {
+    // Asserted directly, because a refactor could silently regress to the
+    // positional form and every IP-literal test in this file would still pass.
+    const seen = [];
+    const original = http.request.bind(http);
+    const spy = vi.spyOn(http, 'request').mockImplementation((opts, cb) => {
+      seen.push(opts.lookup);
+      return original(opts, cb);
+    });
+
+    await withPrivateTargets(async () => { await fetchGuarded(`${hostBase}/ok`); });
+    spy.mockRestore();
+
+    const lookup = seen[0];
+    expect(typeof lookup).toBe('function');
+
+    const arrayForm = await new Promise((r) => lookup('h', { all: true }, (_e, a) => r(a)));
+    expect(Array.isArray(arrayForm)).toBe(true);
+    expect(arrayForm[0].address).toBeTruthy();
+    expect([4, 6]).toContain(arrayForm[0].family);
+
+    const positional = await new Promise((r) => lookup('h', {}, (_e, addr, fam) => r({ addr, fam })));
+    expect(positional.addr).toBeTruthy();
+    expect([4, 6]).toContain(positional.fam);
+  });
+});

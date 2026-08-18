@@ -235,7 +235,25 @@ function requestOnce(url, { method, headers, body, pinnedIp, family, timeoutMs, 
         method,
         headers: { host: url.host, ...headers },
         servername: isHttps ? url.hostname : undefined,
-        lookup: (_host, _opts, cb) => cb(null, pinnedIp, family === 6 ? 6 : 4),
+        lookup: (_host, opts, cb) => {
+          const fam = family === 6 ? 6 : 4;
+          // TWO CALLING CONVENTIONS, and getting this wrong breaks every
+          // request to a real hostname.
+          //
+          // Node >= 20 enables autoSelectFamily by default (Happy Eyeballs),
+          // and that path calls a custom lookup with { all: true } and expects
+          // an ARRAY of { address, family }. The older positional form
+          // cb(null, address, family) is still used when autoSelectFamily is
+          // off. Answering the array form positionally yields
+          // "Invalid IP address: undefined", because Node reads addresses[0].
+          //
+          // This went unnoticed for several phases because every fixture is
+          // reached at 127.0.0.1, and Node skips lookup entirely for an IP
+          // literal — so the pinning path was never exercised by a test.
+          // egress.test.js now covers it via a hostname.
+          if (opts?.all) return cb(null, [{ address: pinnedIp, family: fam }]);
+          return cb(null, pinnedIp, fam);
+        },
       },
       (res) => {
         const chunks = [];
