@@ -29,14 +29,55 @@ export const generatedCaseSchema = z.object({
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']),
   path: z.string().default(''),
   headers: z.record(z.string(), z.string()).default({}),
-  body: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
+  /**
+   * A GET case has no body, and models overwhelmingly express that as
+   * `"body": null` rather than by omitting the key. `.optional()` alone rejects
+   * null, so an otherwise perfect suite was being discarded in full — four
+   * valid cases thrown away over a JSON idiom. Accept null and normalise it to
+   * absent, which is what it means.
+   */
+  body: z.union([z.string(), z.record(z.string(), z.unknown())])
+    .nullish()
+    .transform((v) => (v === null ? undefined : v)),
   assertions: z.array(assertionSchema).min(1).max(8),
   category: z.enum(['positive', 'negative', 'boundary']),
 });
 
-export const generationSchema = z.object({
-  cases: z.array(generatedCaseSchema).min(1).max(12),
-});
+/**
+ * The envelope the model must produce.
+ *
+ * `preprocess` accepts a BARE ARRAY as well as { cases: [...] }. Models emit the
+ * array form regularly — it is a formatting slip, not an ambiguity of intent —
+ * and rejecting it burned two full generation attempts before failing the run.
+ * Coercing a shape whose meaning is unmistakable is not the same as inventing
+ * data: nothing is fabricated, one wrapper is supplied.
+ */
+/** Hard ceiling on a single generation, to bound cost and execution time. */
+export const MAX_CASES = 12;
+
+export const generationSchema = z.preprocess(
+  (value) => {
+    const envelope = Array.isArray(value) ? { cases: value } : value;
+    // TRUNCATE rather than reject. The ceiling exists to bound cost, not to
+    // fail a run: a model that returns 15 cases when asked for 5 has been
+    // over-eager, not wrong, and throwing the batch away helps nobody.
+    if (Array.isArray(envelope?.cases) && envelope.cases.length > MAX_CASES) {
+      return { ...envelope, cases: envelope.cases.slice(0, MAX_CASES) };
+    }
+    return envelope;
+  },
+  /**
+   * The ENVELOPE is validated here; individual cases are NOT.
+   *
+   * This used to be z.array(generatedCaseSchema), which made the per-case
+   * discard logic below unreachable: one malformed case failed the whole
+   * object, so a generation with four perfect cases and one typo produced
+   * nothing at all and burned both repair attempts. docs/01_PRD.md F2 requires
+   * unusable cases to be "discarded and counted", which is only possible if the
+   * good ones survive validation of the batch.
+   */
+  z.object({ cases: z.array(z.unknown()).min(1).max(MAX_CASES) }),
+);
 
 export const SYSTEM_PROMPT = `You are a senior QA engineer who writes precise, executable API tests.
 
@@ -46,7 +87,10 @@ Each case must have:
   name        short human-readable title
   intent      one sentence: what this verifies and why
   method      GET | POST | PUT | PATCH | DELETE | HEAD | OPTIONS
-  path        path/query to append to the base URL, or "" for the base URL itself
+  path        "" to target the base URL itself (this is the common case — the base URL
+              is already a complete endpoint), or "?a=1" to add a query string to it,
+              or "/other/path" with a LEADING SLASH to target a different endpoint.
+              Never repeat the base URL's own path here.
   headers     object of request headers (may be {})
   body        request body for write methods (omit for GET)
   category    positive | negative | boundary
@@ -101,10 +145,52 @@ export function buildPrompt({ url, method, description, count = 4, operation = n
   return lines.filter(Boolean).join('\n');
 }
 
-/** Joins a base URL and a model-supplied path without duplicating slashes. */
+/**
+ * Joins a base URL and a model-supplied path.
+ *
+ * ── WHY THIS IS FIDDLIER THAN IT LOOKS ──────────────────────────────────────
+ * The base can be either an API ROOT ("https://api.x/v1", where "users" should
+ * append) or a COMPLETE ENDPOINT ("https://api.x/users/1", where appending
+ * "users/1" produces the nonsense "/users/1/users/1"). Nothing in the string
+ * distinguishes the two, so the prompt now tells the model exactly what to
+ * return and this function handles the two cases it cannot get right by
+ * resolution alone:
+ *
+ *   1. A QUERY-ONLY suffix appends to the base as-is. Previously "?a=1" became
+ *      ".../users/1/?a=1" — a trailing slash that 404s on many routers.
+ *   2. A suffix that merely REPEATS the tail of the base path is the model
+ *      restating the endpoint it was given, so the base is returned unchanged.
+ *      This is an exact string comparison, not a guess.
+ *
+ * The evaluation harness is what surfaced both: baseline pass rates of 1/9 and
+ * 5/21 against an app that was behaving perfectly.
+ */
 export function joinUrl(base, suffix) {
   if (!suffix) return base;
+
+  // 1. Query- or fragment-only: append directly, no path segment involved.
+  if (suffix.startsWith('?') || suffix.startsWith('#')) {
+    try {
+      const url = new URL(base);
+      if (suffix.startsWith('?')) url.search = suffix;
+      else url.hash = suffix;
+      return url.toString();
+    } catch {
+      return base;
+    }
+  }
+
   try {
+    const baseUrl = new URL(base);
+    const [suffixPath, suffixQuery] = suffix.split('?');
+    const wanted = suffixPath.startsWith('/') ? suffixPath : `/${suffixPath}`;
+
+    // 2. The model restated the endpoint it was already given.
+    if (baseUrl.pathname === wanted || baseUrl.pathname.endsWith(wanted)) {
+      if (suffixQuery) baseUrl.search = suffixQuery;
+      return baseUrl.toString();
+    }
+
     return new URL(suffix, base.endsWith('/') ? base : `${base}/`).toString();
   } catch {
     return base;
@@ -126,8 +212,10 @@ export async function generateCases({
     maxTokens: 2400,
   });
 
-  // Cases that survived the object-level schema but are individually unusable
-  // are DISCARDED AND COUNTED, never silently dropped (docs/01_PRD.md F2).
+  // Per-case validation. Unusable cases are DISCARDED AND COUNTED, never
+  // silently dropped and never allowed to sink the whole batch
+  // (docs/01_PRD.md F2). If EVERY case is unusable, generateCases' caller
+  // raises GEN_FAILED — a visible failure, not an empty success.
   const kept = [];
   const discardReasons = [];
   for (const c of result.data.cases) {

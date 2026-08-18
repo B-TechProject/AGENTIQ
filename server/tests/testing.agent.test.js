@@ -176,6 +176,7 @@ describe('prompt', () => {
 
 describe('joinUrl', () => {
   it.each([
+    // An API ROOT plus a path: append. This is the case that always worked.
     ['https://api.x', 'users/1', 'https://api.x/users/1'],
     ['https://api.x/', 'users/1', 'https://api.x/users/1'],
     ['https://api.x/v1', 'users?a=1', 'https://api.x/v1/users?a=1'],
@@ -183,12 +184,82 @@ describe('joinUrl', () => {
   ])('%s + %s -> %s', (base, suffix, expected) => {
     expect(joinUrl(base, suffix)).toBe(expected);
   });
+
+  /**
+   * REGRESSION — a base that is already a COMPLETE ENDPOINT.
+   *
+   * Every real target URL has a path, and the model routinely restates it or
+   * asks for a query string. Both produced URLs that 404'd, so a generated
+   * suite mostly failed against an application that was behaving perfectly.
+   * The evaluation harness found this: baseline pass rates of 1/9 and 5/21
+   * against the hardened fixture, which by construction is correct.
+   */
+  it.each([
+    // The model restates the endpoint it was given.
+    ['http://h/users/1', 'users/1', 'http://h/users/1'],
+    ['http://h/api/users/1', 'api/users/1', 'http://h/api/users/1'],
+    // Query-only: must not acquire a trailing slash before the '?'.
+    ['http://h/users/1', '?verbose=1', 'http://h/users/1?verbose=1'],
+    // A leading slash means a different endpoint entirely.
+    ['http://h/users/1', '/users/99999', 'http://h/users/99999'],
+    // Restated path carrying a query.
+    ['http://h/items', 'items?ownerId=2', 'http://h/items?ownerId=2'],
+  ])('endpoint base: %s + %s -> %s', (base, suffix, expected) => {
+    expect(joinUrl(base, suffix)).toBe(expected);
+  });
+
+  it('never throws on a malformed suffix', () => {
+    expect(joinUrl('https://api.x', 'http://[::bad')).toBe('https://api.x');
+  });
 });
 
 // ── Generation ───────────────────────────────────────────────────────────────
 
 describe('generateCases', () => {
   const base = { url: 'https://api.example.com', method: 'GET', description: 'user API' };
+
+  /**
+   * REGRESSION — one bad case must not sink the batch.
+   *
+   * generationSchema used to validate each case inside the envelope, which made
+   * the discard-and-count path below it unreachable: four perfect cases plus one
+   * typo produced NOTHING and burned both repair attempts. Found by the
+   * evaluation harness, where it failed a whole run at the eighth of eight
+   * suites.
+   */
+  it('keeps the usable cases and counts the rest', async () => {
+    const good = {
+      name: 'ok', intent: 'i', method: 'GET', path: '', headers: {},
+      category: 'positive', assertions: [{ kind: 'status', expected: 200 }],
+    };
+    const r = await generateCases({ ...base, llm: stubLlm([good, { method: 'NOPE' }, good]) });
+    expect(r.cases).toHaveLength(2);
+    expect(r.discarded).toBe(1);
+    expect(r.discardReasons).toHaveLength(1);
+  });
+
+  it('accepts a bare array, which models emit regularly', async () => {
+    const good = {
+      name: 'ok', intent: 'i', method: 'GET', path: '', headers: {},
+      category: 'positive', assertions: [{ kind: 'status', expected: 200 }],
+    };
+    const arrayLlm = async ({ schema }) => ({
+      data: schema.parse([good]), provider: 'stub', model: 'stub',
+      inputTokens: 1, outputTokens: 1, costUsd: 0, attempts: 1, durationMs: 1,
+    });
+    const r = await generateCases({ ...base, llm: arrayLlm });
+    expect(r.cases).toHaveLength(1);
+  });
+
+  it('treats a null body as absent — models write "body": null for GET', async () => {
+    const withNullBody = {
+      name: 'ok', intent: 'i', method: 'GET', path: '', headers: {}, body: null,
+      category: 'positive', assertions: [{ kind: 'status', expected: 200 }],
+    };
+    const r = await generateCases({ ...base, llm: stubLlm([withNullBody]) });
+    expect(r.cases).toHaveLength(1);
+    expect(r.cases[0].body).toBeUndefined();
+  });
 
   it('returns validated cases with absolute URLs', async () => {
     const r = await generateCases({ ...base, llm: stubLlm(GOOD) });
