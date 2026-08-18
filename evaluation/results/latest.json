@@ -1,0 +1,1656 @@
+{
+  "meta": {
+    "generatedAt": "2026-08-18 05:51 UTC",
+    "node": "v22.23.2",
+    "commit": "05cb48f",
+    "durationSec": 152.76,
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "llmPrimary": "groq",
+    "audit": {
+      "total": 503,
+      "byOutcome": {
+        "ok": 503
+      }
+    }
+  },
+  "security": {
+    "observations": [
+      {
+        "variant": "vulnerable",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "intendedPublic": true,
+        "family": "sqli",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "high",
+          "high",
+          "high",
+          "high",
+          "high"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "intendedPublic": true,
+        "family": "xss",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "vulnerable",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "intendedPublic": true,
+        "family": "auth",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "vulnerable",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "intendedPublic": true,
+        "family": "cors",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "high"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "intendedPublic": true,
+        "family": "headers",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "medium",
+          "low",
+          "low",
+          "low"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "intendedPublic": true,
+        "family": "rate",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "medium"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "intendedPublic": true,
+        "family": "sqli",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "high",
+          "high",
+          "high",
+          "high",
+          "high"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "intendedPublic": true,
+        "family": "xss",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "vulnerable",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "intendedPublic": true,
+        "family": "auth",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "vulnerable",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "intendedPublic": true,
+        "family": "cors",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "high"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "intendedPublic": true,
+        "family": "headers",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "medium",
+          "low",
+          "low",
+          "low"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "intendedPublic": true,
+        "family": "rate",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "medium"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "search-reflected",
+        "path": "/search?q=hello",
+        "intendedPublic": true,
+        "family": "sqli",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "vulnerable",
+        "target": "search-reflected",
+        "path": "/search?q=hello",
+        "intendedPublic": true,
+        "family": "xss",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "high",
+          "high",
+          "high"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "search-reflected",
+        "path": "/search?q=hello",
+        "intendedPublic": true,
+        "family": "auth",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "vulnerable",
+        "target": "search-reflected",
+        "path": "/search?q=hello",
+        "intendedPublic": true,
+        "family": "cors",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "high"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "search-reflected",
+        "path": "/search?q=hello",
+        "intendedPublic": true,
+        "family": "headers",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "medium",
+          "low",
+          "low",
+          "low"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "search-reflected",
+        "path": "/search?q=hello",
+        "intendedPublic": true,
+        "family": "rate",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "medium"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "intendedPublic": false,
+        "family": "sqli",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "vulnerable",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "intendedPublic": false,
+        "family": "xss",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "vulnerable",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "intendedPublic": false,
+        "family": "auth",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "high"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "intendedPublic": false,
+        "family": "cors",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "high"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "intendedPublic": false,
+        "family": "headers",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "medium",
+          "low",
+          "low",
+          "low"
+        ]
+      },
+      {
+        "variant": "vulnerable",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "intendedPublic": false,
+        "family": "rate",
+        "expected": true,
+        "fired": true,
+        "outcome": "TP",
+        "errored": false,
+        "severities": [
+          "medium"
+        ]
+      },
+      {
+        "variant": "hardened",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "intendedPublic": true,
+        "family": "sqli",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "intendedPublic": true,
+        "family": "xss",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "intendedPublic": true,
+        "family": "auth",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "intendedPublic": true,
+        "family": "cors",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "intendedPublic": true,
+        "family": "headers",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "intendedPublic": true,
+        "family": "rate",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "intendedPublic": true,
+        "family": "sqli",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "intendedPublic": true,
+        "family": "xss",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "intendedPublic": true,
+        "family": "auth",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "intendedPublic": true,
+        "family": "cors",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "intendedPublic": true,
+        "family": "headers",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "intendedPublic": true,
+        "family": "rate",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "search-reflected",
+        "path": "/search?q=hello",
+        "intendedPublic": true,
+        "family": "sqli",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "search-reflected",
+        "path": "/search?q=hello",
+        "intendedPublic": true,
+        "family": "xss",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "search-reflected",
+        "path": "/search?q=hello",
+        "intendedPublic": true,
+        "family": "auth",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "search-reflected",
+        "path": "/search?q=hello",
+        "intendedPublic": true,
+        "family": "cors",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "search-reflected",
+        "path": "/search?q=hello",
+        "intendedPublic": true,
+        "family": "headers",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "search-reflected",
+        "path": "/search?q=hello",
+        "intendedPublic": true,
+        "family": "rate",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "intendedPublic": false,
+        "family": "sqli",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "intendedPublic": false,
+        "family": "xss",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "intendedPublic": false,
+        "family": "auth",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "intendedPublic": false,
+        "family": "cors",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "intendedPublic": false,
+        "family": "headers",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      },
+      {
+        "variant": "hardened",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "intendedPublic": false,
+        "family": "rate",
+        "expected": false,
+        "fired": false,
+        "outcome": "TN",
+        "errored": false,
+        "severities": []
+      }
+    ],
+    "overall": {
+      "TP": 16,
+      "FP": 0,
+      "FN": 0,
+      "TN": 32,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1
+    },
+    "perFamily": {
+      "sqli": {
+        "TP": 2,
+        "FP": 0,
+        "FN": 0,
+        "TN": 6,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "xss": {
+        "TP": 1,
+        "FP": 0,
+        "FN": 0,
+        "TN": 7,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "auth": {
+        "TP": 1,
+        "FP": 0,
+        "FN": 0,
+        "TN": 7,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "cors": {
+        "TP": 4,
+        "FP": 0,
+        "FN": 0,
+        "TN": 4,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "headers": {
+        "TP": 4,
+        "FP": 0,
+        "FN": 0,
+        "TN": 4,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "rate": {
+        "TP": 4,
+        "FP": 0,
+        "FN": 0,
+        "TN": 4,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      }
+    },
+    "hardenedFalsePositiveRate": 0,
+    "falsePositives": []
+  },
+  "mutation": {
+    "suites": [
+      {
+        "repeat": 1,
+        "mode": "grounded",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 18,
+        "baselinePassing": 13,
+        "baselineTotal": 18,
+        "generationMs": 1861,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M1",
+            "category": "status-code",
+            "killed": true
+          },
+          {
+            "mutant": "M2",
+            "category": "missing-field",
+            "killed": true
+          },
+          {
+            "mutant": "M3",
+            "category": "wrong-type",
+            "killed": false
+          },
+          {
+            "mutant": "M5",
+            "category": "status-code",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 1,
+        "mode": "grounded",
+        "target": "items",
+        "path": "/items",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 20,
+        "baselinePassing": 10,
+        "baselineTotal": 20,
+        "generationMs": 1737,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 1,
+        "mode": "grounded",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 16,
+        "baselinePassing": 8,
+        "baselineTotal": 16,
+        "generationMs": 1779,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": false
+          },
+          {
+            "mutant": "M8",
+            "category": "boundary",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 1,
+        "mode": "grounded",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "generated": 1,
+        "discarded": 1,
+        "discardReasons": [
+          "Invalid input: expected string, received undefined"
+        ],
+        "assertions": 2,
+        "baselinePassing": 1,
+        "baselineTotal": 2,
+        "generationMs": 1635,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M6",
+            "category": "auth",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 1,
+        "mode": "ungrounded",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 14,
+        "baselinePassing": 9,
+        "baselineTotal": 14,
+        "generationMs": 2635,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M1",
+            "category": "status-code",
+            "killed": true
+          },
+          {
+            "mutant": "M2",
+            "category": "missing-field",
+            "killed": true
+          },
+          {
+            "mutant": "M3",
+            "category": "wrong-type",
+            "killed": false
+          },
+          {
+            "mutant": "M5",
+            "category": "status-code",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 1,
+        "mode": "ungrounded",
+        "target": "items",
+        "path": "/items",
+        "generated": 4,
+        "discarded": 1,
+        "discardReasons": [
+          "Too big: expected array to have <=8 items"
+        ],
+        "assertions": 8,
+        "baselinePassing": 4,
+        "baselineTotal": 8,
+        "generationMs": 1749,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 1,
+        "mode": "ungrounded",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 18,
+        "baselinePassing": 11,
+        "baselineTotal": 18,
+        "generationMs": 1532,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": false
+          },
+          {
+            "mutant": "M8",
+            "category": "boundary",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 1,
+        "mode": "ungrounded",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "generated": 1,
+        "discarded": 1,
+        "discardReasons": [
+          "Invalid input: expected string, received undefined"
+        ],
+        "assertions": 3,
+        "baselinePassing": 1,
+        "baselineTotal": 3,
+        "generationMs": 1903,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M6",
+            "category": "auth",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "grounded",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 22,
+        "baselinePassing": 16,
+        "baselineTotal": 22,
+        "generationMs": 1853,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M1",
+            "category": "status-code",
+            "killed": true
+          },
+          {
+            "mutant": "M2",
+            "category": "missing-field",
+            "killed": true
+          },
+          {
+            "mutant": "M3",
+            "category": "wrong-type",
+            "killed": false
+          },
+          {
+            "mutant": "M5",
+            "category": "status-code",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "grounded",
+        "target": "items",
+        "path": "/items",
+        "generated": 4,
+        "discarded": 1,
+        "discardReasons": [
+          "Too big: expected array to have <=8 items"
+        ],
+        "assertions": 17,
+        "baselinePassing": 9,
+        "baselineTotal": 17,
+        "generationMs": 2447,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "grounded",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 18,
+        "baselinePassing": 8,
+        "baselineTotal": 18,
+        "generationMs": 1809,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": false
+          },
+          {
+            "mutant": "M8",
+            "category": "boundary",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "grounded",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 16,
+        "baselinePassing": 6,
+        "baselineTotal": 16,
+        "generationMs": 10951,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M6",
+            "category": "auth",
+            "killed": true
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "ungrounded",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 25,
+        "baselinePassing": 16,
+        "baselineTotal": 25,
+        "generationMs": 3729,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M1",
+            "category": "status-code",
+            "killed": true
+          },
+          {
+            "mutant": "M2",
+            "category": "missing-field",
+            "killed": false
+          },
+          {
+            "mutant": "M3",
+            "category": "wrong-type",
+            "killed": true
+          },
+          {
+            "mutant": "M5",
+            "category": "status-code",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "ungrounded",
+        "target": "items",
+        "path": "/items",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 22,
+        "baselinePassing": 15,
+        "baselineTotal": 22,
+        "generationMs": 5257,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": true
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "ungrounded",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 18,
+        "baselinePassing": 7,
+        "baselineTotal": 18,
+        "generationMs": 6093,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": false
+          },
+          {
+            "mutant": "M8",
+            "category": "boundary",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "ungrounded",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 18,
+        "baselinePassing": 9,
+        "baselineTotal": 18,
+        "generationMs": 4501,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M6",
+            "category": "auth",
+            "killed": true
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "grounded",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 21,
+        "baselinePassing": 15,
+        "baselineTotal": 21,
+        "generationMs": 7918,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M1",
+            "category": "status-code",
+            "killed": true
+          },
+          {
+            "mutant": "M2",
+            "category": "missing-field",
+            "killed": true
+          },
+          {
+            "mutant": "M3",
+            "category": "wrong-type",
+            "killed": false
+          },
+          {
+            "mutant": "M5",
+            "category": "status-code",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "grounded",
+        "target": "items",
+        "path": "/items",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 19,
+        "baselinePassing": 9,
+        "baselineTotal": 19,
+        "generationMs": 5237,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "grounded",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 26,
+        "baselinePassing": 14,
+        "baselineTotal": 26,
+        "generationMs": 5090,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": false
+          },
+          {
+            "mutant": "M8",
+            "category": "boundary",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "grounded",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 20,
+        "baselinePassing": 8,
+        "baselineTotal": 20,
+        "generationMs": 5678,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M6",
+            "category": "auth",
+            "killed": true
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "ungrounded",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 19,
+        "baselinePassing": 12,
+        "baselineTotal": 19,
+        "generationMs": 3687,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M1",
+            "category": "status-code",
+            "killed": true
+          },
+          {
+            "mutant": "M2",
+            "category": "missing-field",
+            "killed": false
+          },
+          {
+            "mutant": "M3",
+            "category": "wrong-type",
+            "killed": true
+          },
+          {
+            "mutant": "M5",
+            "category": "status-code",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "ungrounded",
+        "target": "items",
+        "path": "/items",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 20,
+        "baselinePassing": 13,
+        "baselineTotal": 20,
+        "generationMs": 4392,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": true
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "ungrounded",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 23,
+        "baselinePassing": 12,
+        "baselineTotal": 23,
+        "generationMs": 5615,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": false
+          },
+          {
+            "mutant": "M8",
+            "category": "boundary",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "ungrounded",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 18,
+        "baselinePassing": 9,
+        "baselineTotal": 18,
+        "generationMs": 7849,
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "kills": [
+          {
+            "mutant": "M6",
+            "category": "auth",
+            "killed": true
+          }
+        ]
+      }
+    ],
+    "generation": {
+      "inputTokens": 15126,
+      "outputTokens": 14458,
+      "costUsd": 0.0131124,
+      "calls": 24,
+      "ms": 96937
+    },
+    "byMode": {
+      "grounded": {
+        "repeats": 3,
+        "suitesAttempted": 12,
+        "generationFailures": 0,
+        "generationSuccessRate": 1,
+        "perRepeat": [
+          {
+            "repeat": 1,
+            "killed": 2,
+            "total": 10,
+            "score": 0.2
+          },
+          {
+            "repeat": 2,
+            "killed": 3,
+            "total": 10,
+            "score": 0.3
+          },
+          {
+            "repeat": 3,
+            "killed": 3,
+            "total": 10,
+            "score": 0.3
+          }
+        ],
+        "scoreMin": 0.2,
+        "scoreMax": 0.3,
+        "suites": 12,
+        "casesGenerated": 55,
+        "casesDiscarded": 2,
+        "assertions": 215,
+        "baselinePassRate": 0.544,
+        "mutantsEvaluated": 30,
+        "mutantsKilled": 8,
+        "mutationScore": 0.267,
+        "byCategory": {
+          "status-code": {
+            "killed": 3,
+            "total": 6,
+            "score": 0.5
+          },
+          "missing-field": {
+            "killed": 3,
+            "total": 9,
+            "score": 0.333
+          },
+          "wrong-type": {
+            "killed": 0,
+            "total": 3,
+            "score": 0
+          },
+          "content-type": {
+            "killed": 0,
+            "total": 6,
+            "score": 0
+          },
+          "boundary": {
+            "killed": 0,
+            "total": 3,
+            "score": 0
+          },
+          "auth": {
+            "killed": 2,
+            "total": 3,
+            "score": 0.667
+          }
+        },
+        "byMutant": {
+          "M1": {
+            "killed": 3,
+            "total": 3
+          },
+          "M2": {
+            "killed": 3,
+            "total": 3
+          },
+          "M3": {
+            "killed": 0,
+            "total": 3
+          },
+          "M5": {
+            "killed": 0,
+            "total": 3
+          },
+          "M4": {
+            "killed": 0,
+            "total": 6
+          },
+          "M7": {
+            "killed": 0,
+            "total": 6
+          },
+          "M8": {
+            "killed": 0,
+            "total": 3
+          },
+          "M6": {
+            "killed": 2,
+            "total": 3
+          }
+        }
+      },
+      "ungrounded": {
+        "repeats": 3,
+        "suitesAttempted": 12,
+        "generationFailures": 0,
+        "generationSuccessRate": 1,
+        "perRepeat": [
+          {
+            "repeat": 1,
+            "killed": 2,
+            "total": 10,
+            "score": 0.2
+          },
+          {
+            "repeat": 2,
+            "killed": 4,
+            "total": 10,
+            "score": 0.4
+          },
+          {
+            "repeat": 3,
+            "killed": 4,
+            "total": 10,
+            "score": 0.4
+          }
+        ],
+        "scoreMin": 0.2,
+        "scoreMax": 0.4,
+        "suites": 12,
+        "casesGenerated": 55,
+        "casesDiscarded": 2,
+        "assertions": 206,
+        "baselinePassRate": 0.573,
+        "mutantsEvaluated": 30,
+        "mutantsKilled": 10,
+        "mutationScore": 0.333,
+        "byCategory": {
+          "status-code": {
+            "killed": 3,
+            "total": 6,
+            "score": 0.5
+          },
+          "missing-field": {
+            "killed": 3,
+            "total": 9,
+            "score": 0.333
+          },
+          "wrong-type": {
+            "killed": 2,
+            "total": 3,
+            "score": 0.667
+          },
+          "content-type": {
+            "killed": 0,
+            "total": 6,
+            "score": 0
+          },
+          "boundary": {
+            "killed": 0,
+            "total": 3,
+            "score": 0
+          },
+          "auth": {
+            "killed": 2,
+            "total": 3,
+            "score": 0.667
+          }
+        },
+        "byMutant": {
+          "M1": {
+            "killed": 3,
+            "total": 3
+          },
+          "M2": {
+            "killed": 1,
+            "total": 3
+          },
+          "M3": {
+            "killed": 2,
+            "total": 3
+          },
+          "M5": {
+            "killed": 0,
+            "total": 3
+          },
+          "M4": {
+            "killed": 0,
+            "total": 6
+          },
+          "M7": {
+            "killed": 2,
+            "total": 6
+          },
+          "M8": {
+            "killed": 0,
+            "total": 3
+          },
+          "M6": {
+            "killed": 2,
+            "total": 3
+          }
+        }
+      }
+    },
+    "ablation": {
+      "grounded": 0.267,
+      "ungrounded": 0.333,
+      "deltaPoints": -6.6
+    }
+  }
+}
