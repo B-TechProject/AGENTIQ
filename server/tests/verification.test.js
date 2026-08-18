@@ -192,23 +192,48 @@ describe('POST /api/auth/verify/resend', () => {
 });
 
 describe('the raw token must never escape in production', () => {
-  it('is revealed only when NOT production AND mail is unconfigured', () => {
+  it('is revealed only when NOT production AND the mail was NOT delivered', () => {
+    /**
+     * The condition is DELIVERY, not configuration.
+     *
+     * It used to ask "is a provider configured?", which is a different
+     * question. Resend's free tier refuses every recipient except the account
+     * owner, so a correctly configured server still fails to deliver — and the
+     * old rule then withheld the link too, leaving the user with a 403, no
+     * email and no way to verify. Production still reveals nothing either way.
+     */
     const prevEnv = env.NODE_ENV;
     try {
       env.NODE_ENV = 'development';
-      expect(mayRevealToken()).toBe(true);   // no mail configured in tests
+      expect(mayRevealToken({ delivered: false })).toBe(true);
+      expect(mayRevealToken({ delivered: true })).toBe(false);
 
+      // Production refuses regardless of what happened to the message.
       env.NODE_ENV = 'production';
-      expect(mayRevealToken()).toBe(false);  // production alone is enough to stop it
+      expect(mayRevealToken({ delivered: false })).toBe(false);
+      expect(mayRevealToken({ delivered: true })).toBe(false);
 
+      // A configured-but-failing provider must still yield the link in dev —
+      // the case the previous rule got wrong.
       env.NODE_ENV = 'development';
       env.RESEND_API_KEY = 're_fake_key_for_this_assertion';
-      // Mail works, so the caller has no need for the token.
-      expect(mayRevealToken()).toBe(false);
+      expect(mayRevealToken({ delivered: false })).toBe(true);
     } finally {
       env.NODE_ENV = prevEnv;
       delete env.RESEND_API_KEY;
     }
+  });
+
+  it('reports WHY a send failed, so the UI does not blame the wrong thing', async () => {
+    const user = await User.create({
+      email: 'a@b.com', displayName: 'A',
+      authProviders: [{ provider: 'local', providerId: 'a@b.com', email: 'a@b.com' }],
+    });
+    const result = await issueVerification(user);
+    // Unconfigured in tests: not an error, just nothing sent.
+    expect(result.sent).toBe(false);
+    expect(result.mailConfigured).toBe(false);
+    expect(result.url).toBeTruthy();
   });
 
   it('omits devVerificationUrl from the register response in production', async () => {

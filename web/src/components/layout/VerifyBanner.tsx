@@ -19,6 +19,8 @@ interface ResendResult {
   alreadyVerified: boolean;
   emailSent: boolean;
   devVerificationUrl?: string | null;
+  mailConfigured?: boolean;
+  mailError?: string | null;
   mail?: { configured: boolean; driver: string };
 }
 
@@ -43,12 +45,23 @@ export function VerifyBanner() {
       }
       setState('sent');
       /**
-       * Say what actually happened. When no provider is configured the server
-       * cannot send anything, and telling someone "check your inbox" when
-       * nothing was sent wastes their time looking for it.
+       * Three outcomes, three different messages.
+       *
+       * "No provider configured" and "the provider refused this recipient" have
+       * different fixes, and the first version said the former for both — so a
+       * Resend free-tier 403 (which only allows the account owner as a
+       * recipient) told the user to go configure something that was already
+       * configured.
        */
       if (data.emailSent) {
         setNote(`Sent to ${user.email}. Check your inbox, and your spam folder.`);
+      } else if (data.mailConfigured) {
+        setNote(
+          data.mailError
+            ? `The mail provider refused to send to ${user.email}: ${data.mailError}`
+            : `The mail provider could not send to ${user.email}.`,
+        );
+        setDevUrl(data.devVerificationUrl ?? null);
       } else {
         setNote('No mail provider is configured on this server, so nothing was sent.');
         setDevUrl(data.devVerificationUrl ?? null);

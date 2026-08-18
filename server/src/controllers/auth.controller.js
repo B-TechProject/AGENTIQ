@@ -132,13 +132,16 @@ export async function resendVerification(req, res) {
 
   const verification = await issueVerification(user).catch((err) => {
     logger.error({ err: err.message }, 'resend failed');
-    return { sent: false, url: null };
+    return { sent: false, url: null, error: err.message, mailConfigured: false };
   });
 
   return ok(res, {
     alreadyVerified: false,
     emailSent: verification.sent,
     devVerificationUrl: verification.url,
+    // Distinguishes "no provider" from "the provider refused this recipient".
+    mailConfigured: verification.mailConfigured ?? false,
+    mailError: verification.error ?? null,
     mail: mailStatus(),
   });
 }

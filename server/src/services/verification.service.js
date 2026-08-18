@@ -14,10 +14,16 @@
  *    /api/auth/login is already careful about this; an endpoint that leaks the
  *    same fact through a different door would make that care pointless.
  *
- * 4. THE TOKEN IS RETURNED TO THE CALLER ONLY WHEN IT CANNOT BE EMAILED, AND
- *    NEVER IN PRODUCTION. Without a mail provider a developer still needs the
- *    link to continue, but shipping that behaviour to production would turn
- *    "register an account" into "verify any address you like".
+ * 4. THE TOKEN IS RETURNED TO THE CALLER ONLY WHEN IT WAS NOT ACTUALLY
+ *    DELIVERED, AND NEVER IN PRODUCTION.
+ *
+ *    The condition is DELIVERY, not configuration. The first version asked
+ *    "is a provider configured?", which is a different question: Resend's free
+ *    tier refuses any recipient except the account owner, so a perfectly
+ *    configured server can still fail to deliver — and that left the user with
+ *    a 403, no email, and no link. Keying on what actually happened means a
+ *    failed send still leaves a developer a way forward, while production
+ *    reveals nothing regardless.
  *
  * 5. VERIFICATION IS SOFT. An unverified user can sign in and use the product;
  *    the UI shows a banner. A demo that can be locked out by a spam filter is
@@ -50,7 +56,8 @@ export function verificationUrl(token) {
  * Guarded by BOTH conditions on purpose. Either alone is one config mistake
  * away from an account-takeover primitive.
  */
-export const mayRevealToken = () => env.NODE_ENV !== 'production' && !isMailConfigured();
+export const mayRevealToken = ({ delivered = false } = {}) =>
+  env.NODE_ENV !== 'production' && !delivered;
 
 /**
  * Issues a fresh token and emails it. Existing unused tokens for the user are
@@ -79,11 +86,20 @@ export async function issueVerification(user) {
   const { sent, driver, error } = await sendMail({ to: user.email, ...message });
   if (error) logger.warn({ userId: String(user._id), error }, 'verification email failed to send');
 
-  const revealed = mayRevealToken();
+  const revealed = mayRevealToken({ delivered: sent });
   return {
     sent,
     driver,
-    // Never leaked in production, and never when mail actually works.
+    /**
+     * Why the send failed, so the UI can say something true.
+     *
+     * "No provider is configured" and "the provider refused this recipient" are
+     * different problems with different fixes, and telling someone the wrong
+     * one sends them to look in the wrong place.
+     */
+    error: error ?? null,
+    mailConfigured: isMailConfigured(),
+    // Never in production; never when the message actually went out.
     url: revealed ? url : null,
     token: revealed ? token : null,
     revealed,
