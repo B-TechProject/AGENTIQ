@@ -16,7 +16,7 @@
  * never block completion. A run that finishes without explanations is still a
  * complete, valid run.
  */
-import { generateJSON, providerOrder } from './llm.js';
+import { generateJSON, providerOrder, TASK } from './llm.js';
 import { logger } from '../lib/logger.js';
 
 /** docs/03_App_Flow.md B7: EXPLAINING is best-effort with a 5s timeout. */
@@ -100,6 +100,8 @@ export async function explainFailure({
       prompt: buildPrompt(result, target),
       schema: explanationSchema,
       maxTokens: 200,
+      // Cheapest, fastest tier — this is short prose, not structured output.
+      task: TASK.EXPLANATION,
       temperature: 0.3,
       maxRepairs: 0, // best-effort; do not spend a retry on a nicety
     }).catch((err) => {

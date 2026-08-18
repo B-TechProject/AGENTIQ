@@ -221,14 +221,44 @@ export function renderReport({ security, mutation, meta }) {
   const overlaps = g.scoreMin !== null && u.scoreMin !== null
     && g.scoreMin <= u.scoreMax && u.scoreMin <= g.scoreMax;
 
+  // The repeats are PAIRED — repeat i of each arm ran under identical
+  // conditions — so comparing them repeat by repeat is a sharper test than
+  // asking whether the two ranges happen to overlap.
+  const paired = g.perRepeat.map((r, i) => ({ g: r.score, u: u.perRepeat[i]?.score }))
+    .filter((x) => x.g !== null && x.g !== undefined && x.u !== null && x.u !== undefined);
+  const wins = paired.filter((x) => x.g > x.u).length;
+  const ties = paired.filter((x) => x.g === x.u).length;
+  const losses = paired.filter((x) => x.g < x.u).length;
+
   if (overlaps && d !== null && d !== 0) {
     w(
-      `The means differ by ${d > 0 ? '+' : ''}${d} points, but **the observed ranges overlap**`,
+      `The means differ by ${d > 0 ? '+' : ''}${d} points and **the observed ranges overlap**`,
       `(grounded ${pct(g.scoreMin)}–${pct(g.scoreMax)}, description-only ` +
-        `${pct(u.scoreMin)}–${pct(u.scoreMax)}), so this benchmark does not support a claim in`,
-      'either direction. The honest reading is **no detectable difference at this sample size**,',
-      'and the signed delta is reported only so the raw figure is not hidden.',
+        `${pct(u.scoreMin)}–${pct(u.scoreMax)}), so the ranges alone do not settle it.`,
       '',
+      'The repeats are **paired**, though — repeat *i* of each arm ran under identical conditions —',
+      'so the sharper comparison is repeat by repeat:',
+      '',
+      `- Spec-grounded **won ${wins}**, **tied ${ties}**, **lost ${losses}** of ${paired.length}.`,
+      '',
+    );
+    if (losses === 0 && wins > 0) {
+      w(
+        `Grounding matched or beat description-only in **every** repeat. With ${paired.length}`,
+        'paired runs a clean sweep would happen about one time in eight by chance alone, so this is',
+        '**suggestive but not significant** — it points the way F4 predicted without proving it.',
+        'More endpoints and more repeats would settle it; that is a limit of the benchmark, not a',
+        'finding about grounding.',
+        '',
+      );
+    } else {
+      w(
+        'That is not a consistent direction, so the honest reading is **no detectable difference at',
+        'this sample size**, and the signed delta is reported only so the raw figure is not hidden.',
+        '',
+      );
+    }
+    w('',
       'What the per-mutant table does show is more specific than the aggregate, and more useful:',
       'grounding changes *which* behaviours get checked, not how many. Assertions on declared',
       'response fields are the mechanism `docs/01_PRD.md` F4 predicted, and that is visible per',

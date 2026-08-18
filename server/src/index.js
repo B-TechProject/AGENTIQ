@@ -17,6 +17,36 @@ const { registerAllTools } = await import('./mcp/tools/index.js');
 const tools = await registerAllTools();
 logger.info(`MCP registry: ${tools.length} tools registered`);
 
+/**
+ * Say out loud which LLM providers are actually usable.
+ *
+ * providerOrder() silently DROPS a provider that is named but unconfigured, so
+ * LLM_PRIMARY=groq with LLM_FALLBACK=bedrock and no BEDROCK_MODEL_ID resolves
+ * to ['groq'] — a chain with no fallback at all, which reads as configured.
+ * That went unnoticed until an evaluation run was traced back to the wrong
+ * provider. A named-but-unavailable provider is now a warning, and a
+ * single-provider chain says plainly that there is nothing to fall back to.
+ */
+const { providerOrder, availableProviders } = await import('./services/llm.js');
+const usable = providerOrder();
+const available = availableProviders();
+for (const named of [env.LLM_PRIMARY, env.LLM_FALLBACK]) {
+  if (named && !available[named]) {
+    logger.warn(
+      { provider: named },
+      `LLM provider "${named}" is named in the configuration but is not usable — its ` +
+      'credentials or model id are missing, so it has been dropped from the chain.',
+    );
+  }
+}
+if (usable.length === 0) {
+  logger.error('No LLM provider is usable. Test generation will fail on every run.');
+} else if (usable.length === 1) {
+  logger.warn(`LLM chain: ${usable[0]} only — there is NO fallback if it fails.`);
+} else {
+  logger.info(`LLM chain: ${usable.join(' -> ')}`);
+}
+
 const { app } = await import('./app.js');
 
 try {

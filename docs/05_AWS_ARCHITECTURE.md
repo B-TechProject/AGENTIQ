@@ -230,3 +230,60 @@ Fallback, in order of preference — decide at Phase 15, not now:
   every AWS benefit that matters to the report and drops the fixed cost to near zero.
 
 Nothing in Phases 4–12 depends on which of these is chosen, so the decision can wait.
+
+---
+
+## LLM routing — decided by measurement (Aug 2026)
+
+**Bedrock is primary; Groq is the fallback.** The chain used to resolve to Groq alone, because
+`LLM_FALLBACK=bedrock` was set but `BEDROCK_MODEL_ID` was not, and `providerOrder()` silently
+drops a provider it cannot use. That looked configured and was not. The boot log now warns when a
+named provider is unusable, and says explicitly when the chain has no fallback.
+
+### Why Bedrock over Groq
+
+| | Bedrock (Nova Lite) | Groq (gpt-oss-120b) |
+| --- | --: | --: |
+| Cost per generation | **$0.000156** | $0.00055 |
+| Latency | **~2.4 s** | ~4.0 s |
+| Free-tier TPM limit | none hit | **aborted 3 evaluation runs** |
+| Mutation score (grounded) | **46.7%** | 26.7% |
+
+Cheaper, faster, better on the benchmark, and AWS-native — which is what this document argued for
+in the first place.
+
+### Per-task routing
+
+Generation and explanation are different problems, so they route independently
+(`TASK_MODELS` in `server/src/services/llm.js`, every entry env-overridable).
+
+| Task | What it is | Bedrock | Groq |
+| --- | --- | --- | --- |
+| `generation` | 5 test cases as structured JSON, once per run, sets suite quality | `nova-lite` | `gpt-oss-120b` |
+| `explanation` | 2 sentences on one failure, ~200 tokens, once per failure | `nova-lite` | `gpt-oss-20b` |
+
+### The two measurements that overturned the obvious assignment
+
+**Cheapest model for the cheap task was wrong.** On explanation (n=6): `nova-micro` succeeded
+3/6 at 1115 ms, `nova-lite` 6/6 at 903 ms. Explanations run with `maxRepairs: 0` by design, so
+half of Micro's calls produced nothing while still costing tokens — dearer *and* slower per
+successful explanation.
+
+**The most expensive model was also wrong.** Full harness per tier, 3 repeats each:
+
+| Generation model | Mutation score (grounded) | Range | Cost per run |
+| --- | --: | --: | --: |
+| `nova-lite` | **46.7%** | 40–50% | **$0.0042** |
+| `nova-pro` | 33.3% | 30–40% | $0.0559 |
+
+Lite led on every repeat and left fewer behaviours unchecked. Bigger was not better, and it cost
+13× more to be worse.
+
+**Consequence, stated plainly:** on Bedrock both tasks currently resolve to the same model,
+because that is what the evidence supports. The routing exists so the tiers *can* diverge — the
+Groq fallback already does — not to manufacture a split the measurements contradict.
+
+### Monthly cost at this configuration
+
+One run ≈ 1 generation + up to 3 explanations ≈ **$0.0004**. Even a thousand runs a month is well
+under a dollar, comfortably inside the $30–40 ceiling.

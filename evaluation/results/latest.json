@@ -1,16 +1,16 @@
 {
   "meta": {
-    "generatedAt": "2026-08-18 05:51 UTC",
+    "generatedAt": "2026-08-18 07:31 UTC",
     "node": "v22.23.2",
-    "commit": "05cb48f",
-    "durationSec": 152.76,
-    "provider": "groq",
-    "model": "openai/gpt-oss-120b",
-    "llmPrimary": "groq",
+    "commit": "5494702",
+    "durationSec": 121.7,
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-lite-v1:0",
+    "llmPrimary": "bedrock",
     "audit": {
-      "total": 503,
+      "total": 522,
       "byOutcome": {
-        "ok": 503
+        "ok": 522
       }
     }
   },
@@ -725,12 +725,12 @@
         "generated": 5,
         "discarded": 0,
         "discardReasons": [],
-        "assertions": 18,
-        "baselinePassing": 13,
-        "baselineTotal": 18,
-        "generationMs": 1861,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "assertions": 12,
+        "baselinePassing": 10,
+        "baselineTotal": 12,
+        "generationMs": 2698,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M1",
@@ -750,7 +750,7 @@
           {
             "mutant": "M5",
             "category": "status-code",
-            "killed": false
+            "killed": true
           }
         ]
       },
@@ -762,12 +762,12 @@
         "generated": 5,
         "discarded": 0,
         "discardReasons": [],
-        "assertions": 20,
-        "baselinePassing": 10,
-        "baselineTotal": 20,
-        "generationMs": 1737,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "assertions": 24,
+        "baselinePassing": 17,
+        "baselineTotal": 24,
+        "generationMs": 3153,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M4",
@@ -777,7 +777,7 @@
           {
             "mutant": "M7",
             "category": "missing-field",
-            "killed": false
+            "killed": true
           }
         ]
       },
@@ -789,12 +789,12 @@
         "generated": 5,
         "discarded": 0,
         "discardReasons": [],
-        "assertions": 16,
-        "baselinePassing": 8,
-        "baselineTotal": 16,
-        "generationMs": 1779,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "assertions": 7,
+        "baselinePassing": 3,
+        "baselineTotal": 7,
+        "generationMs": 2068,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M4",
@@ -818,22 +818,20 @@
         "mode": "grounded",
         "target": "admin-users",
         "path": "/admin/users",
-        "generated": 1,
-        "discarded": 1,
-        "discardReasons": [
-          "Invalid input: expected string, received undefined"
-        ],
-        "assertions": 2,
-        "baselinePassing": 1,
-        "baselineTotal": 2,
-        "generationMs": 1635,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 6,
+        "baselinePassing": 4,
+        "baselineTotal": 6,
+        "generationMs": 1971,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M6",
             "category": "auth",
-            "killed": false
+            "killed": true
           }
         ]
       },
@@ -845,12 +843,12 @@
         "generated": 5,
         "discarded": 0,
         "discardReasons": [],
-        "assertions": 14,
-        "baselinePassing": 9,
-        "baselineTotal": 14,
-        "generationMs": 2635,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "assertions": 10,
+        "baselinePassing": 8,
+        "baselineTotal": 10,
+        "generationMs": 2397,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M1",
@@ -879,17 +877,15 @@
         "mode": "ungrounded",
         "target": "items",
         "path": "/items",
-        "generated": 4,
-        "discarded": 1,
-        "discardReasons": [
-          "Too big: expected array to have <=8 items"
-        ],
-        "assertions": 8,
-        "baselinePassing": 4,
-        "baselineTotal": 8,
-        "generationMs": 1749,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 17,
+        "baselinePassing": 15,
+        "baselineTotal": 17,
+        "generationMs": 2790,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M4",
@@ -899,7 +895,7 @@
           {
             "mutant": "M7",
             "category": "missing-field",
-            "killed": false
+            "killed": true
           }
         ]
       },
@@ -911,12 +907,12 @@
         "generated": 5,
         "discarded": 0,
         "discardReasons": [],
-        "assertions": 18,
-        "baselinePassing": 11,
-        "baselineTotal": 18,
-        "generationMs": 1532,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "assertions": 8,
+        "baselinePassing": 4,
+        "baselineTotal": 8,
+        "generationMs": 2405,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M4",
@@ -940,22 +936,20 @@
         "mode": "ungrounded",
         "target": "admin-users",
         "path": "/admin/users",
-        "generated": 1,
-        "discarded": 1,
-        "discardReasons": [
-          "Invalid input: expected string, received undefined"
-        ],
-        "assertions": 3,
-        "baselinePassing": 1,
-        "baselineTotal": 3,
-        "generationMs": 1903,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 6,
+        "baselinePassing": 4,
+        "baselineTotal": 6,
+        "generationMs": 2080,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M6",
             "category": "auth",
-            "killed": false
+            "killed": true
           }
         ]
       },
@@ -964,15 +958,133 @@
         "mode": "grounded",
         "target": "users-by-id",
         "path": "/users/1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 9,
+        "baselinePassing": 8,
+        "baselineTotal": 9,
+        "generationMs": 2466,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
+        "kills": [
+          {
+            "mutant": "M1",
+            "category": "status-code",
+            "killed": true
+          },
+          {
+            "mutant": "M2",
+            "category": "missing-field",
+            "killed": true
+          },
+          {
+            "mutant": "M3",
+            "category": "wrong-type",
+            "killed": false
+          },
+          {
+            "mutant": "M5",
+            "category": "status-code",
+            "killed": true
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "grounded",
+        "target": "items",
+        "path": "/items",
         "generated": 5,
         "discarded": 0,
         "discardReasons": [],
         "assertions": 22,
-        "baselinePassing": 16,
+        "baselinePassing": 18,
         "baselineTotal": 22,
-        "generationMs": 1853,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "generationMs": 4012,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": true
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "grounded",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 7,
+        "baselinePassing": 3,
+        "baselineTotal": 7,
+        "generationMs": 2121,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": false
+          },
+          {
+            "mutant": "M8",
+            "category": "boundary",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "grounded",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 6,
+        "baselinePassing": 4,
+        "baselineTotal": 6,
+        "generationMs": 2083,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
+        "kills": [
+          {
+            "mutant": "M6",
+            "category": "auth",
+            "killed": true
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "ungrounded",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 10,
+        "baselinePassing": 8,
+        "baselineTotal": 10,
+        "generationMs": 2499,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M1",
@@ -998,7 +1110,7 @@
       },
       {
         "repeat": 2,
-        "mode": "grounded",
+        "mode": "ungrounded",
         "target": "items",
         "path": "/items",
         "generated": 4,
@@ -1007,274 +1119,11 @@
           "Too big: expected array to have <=8 items"
         ],
         "assertions": 17,
-        "baselinePassing": 9,
-        "baselineTotal": 17,
-        "generationMs": 2447,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
-        "kills": [
-          {
-            "mutant": "M4",
-            "category": "content-type",
-            "killed": false
-          },
-          {
-            "mutant": "M7",
-            "category": "missing-field",
-            "killed": false
-          }
-        ]
-      },
-      {
-        "repeat": 2,
-        "mode": "grounded",
-        "target": "items-filtered",
-        "path": "/items?ownerId=1",
-        "generated": 5,
-        "discarded": 0,
-        "discardReasons": [],
-        "assertions": 18,
-        "baselinePassing": 8,
-        "baselineTotal": 18,
-        "generationMs": 1809,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
-        "kills": [
-          {
-            "mutant": "M4",
-            "category": "content-type",
-            "killed": false
-          },
-          {
-            "mutant": "M7",
-            "category": "missing-field",
-            "killed": false
-          },
-          {
-            "mutant": "M8",
-            "category": "boundary",
-            "killed": false
-          }
-        ]
-      },
-      {
-        "repeat": 2,
-        "mode": "grounded",
-        "target": "admin-users",
-        "path": "/admin/users",
-        "generated": 5,
-        "discarded": 0,
-        "discardReasons": [],
-        "assertions": 16,
-        "baselinePassing": 6,
-        "baselineTotal": 16,
-        "generationMs": 10951,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
-        "kills": [
-          {
-            "mutant": "M6",
-            "category": "auth",
-            "killed": true
-          }
-        ]
-      },
-      {
-        "repeat": 2,
-        "mode": "ungrounded",
-        "target": "users-by-id",
-        "path": "/users/1",
-        "generated": 5,
-        "discarded": 0,
-        "discardReasons": [],
-        "assertions": 25,
-        "baselinePassing": 16,
-        "baselineTotal": 25,
-        "generationMs": 3729,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
-        "kills": [
-          {
-            "mutant": "M1",
-            "category": "status-code",
-            "killed": true
-          },
-          {
-            "mutant": "M2",
-            "category": "missing-field",
-            "killed": false
-          },
-          {
-            "mutant": "M3",
-            "category": "wrong-type",
-            "killed": true
-          },
-          {
-            "mutant": "M5",
-            "category": "status-code",
-            "killed": false
-          }
-        ]
-      },
-      {
-        "repeat": 2,
-        "mode": "ungrounded",
-        "target": "items",
-        "path": "/items",
-        "generated": 5,
-        "discarded": 0,
-        "discardReasons": [],
-        "assertions": 22,
-        "baselinePassing": 15,
-        "baselineTotal": 22,
-        "generationMs": 5257,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
-        "kills": [
-          {
-            "mutant": "M4",
-            "category": "content-type",
-            "killed": false
-          },
-          {
-            "mutant": "M7",
-            "category": "missing-field",
-            "killed": true
-          }
-        ]
-      },
-      {
-        "repeat": 2,
-        "mode": "ungrounded",
-        "target": "items-filtered",
-        "path": "/items?ownerId=1",
-        "generated": 5,
-        "discarded": 0,
-        "discardReasons": [],
-        "assertions": 18,
-        "baselinePassing": 7,
-        "baselineTotal": 18,
-        "generationMs": 6093,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
-        "kills": [
-          {
-            "mutant": "M4",
-            "category": "content-type",
-            "killed": false
-          },
-          {
-            "mutant": "M7",
-            "category": "missing-field",
-            "killed": false
-          },
-          {
-            "mutant": "M8",
-            "category": "boundary",
-            "killed": false
-          }
-        ]
-      },
-      {
-        "repeat": 2,
-        "mode": "ungrounded",
-        "target": "admin-users",
-        "path": "/admin/users",
-        "generated": 5,
-        "discarded": 0,
-        "discardReasons": [],
-        "assertions": 18,
-        "baselinePassing": 9,
-        "baselineTotal": 18,
-        "generationMs": 4501,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
-        "kills": [
-          {
-            "mutant": "M6",
-            "category": "auth",
-            "killed": true
-          }
-        ]
-      },
-      {
-        "repeat": 3,
-        "mode": "grounded",
-        "target": "users-by-id",
-        "path": "/users/1",
-        "generated": 5,
-        "discarded": 0,
-        "discardReasons": [],
-        "assertions": 21,
-        "baselinePassing": 15,
-        "baselineTotal": 21,
-        "generationMs": 7918,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
-        "kills": [
-          {
-            "mutant": "M1",
-            "category": "status-code",
-            "killed": true
-          },
-          {
-            "mutant": "M2",
-            "category": "missing-field",
-            "killed": true
-          },
-          {
-            "mutant": "M3",
-            "category": "wrong-type",
-            "killed": false
-          },
-          {
-            "mutant": "M5",
-            "category": "status-code",
-            "killed": false
-          }
-        ]
-      },
-      {
-        "repeat": 3,
-        "mode": "grounded",
-        "target": "items",
-        "path": "/items",
-        "generated": 5,
-        "discarded": 0,
-        "discardReasons": [],
-        "assertions": 19,
-        "baselinePassing": 9,
-        "baselineTotal": 19,
-        "generationMs": 5237,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
-        "kills": [
-          {
-            "mutant": "M4",
-            "category": "content-type",
-            "killed": false
-          },
-          {
-            "mutant": "M7",
-            "category": "missing-field",
-            "killed": false
-          }
-        ]
-      },
-      {
-        "repeat": 3,
-        "mode": "grounded",
-        "target": "items-filtered",
-        "path": "/items?ownerId=1",
-        "generated": 5,
-        "discarded": 0,
-        "discardReasons": [],
-        "assertions": 26,
         "baselinePassing": 14,
-        "baselineTotal": 26,
-        "generationMs": 5090,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "baselineTotal": 17,
+        "generationMs": 3325,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M4",
@@ -1284,7 +1133,34 @@
           {
             "mutant": "M7",
             "category": "missing-field",
+            "killed": true
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "mode": "ungrounded",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 9,
+        "baselinePassing": 7,
+        "baselineTotal": 9,
+        "generationMs": 2360,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
             "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": true
           },
           {
             "mutant": "M8",
@@ -1294,19 +1170,19 @@
         ]
       },
       {
-        "repeat": 3,
-        "mode": "grounded",
+        "repeat": 2,
+        "mode": "ungrounded",
         "target": "admin-users",
         "path": "/admin/users",
         "generated": 5,
         "discarded": 0,
         "discardReasons": [],
-        "assertions": 20,
-        "baselinePassing": 8,
-        "baselineTotal": 20,
-        "generationMs": 5678,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "assertions": 6,
+        "baselinePassing": 4,
+        "baselineTotal": 6,
+        "generationMs": 1915,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M6",
@@ -1317,18 +1193,18 @@
       },
       {
         "repeat": 3,
-        "mode": "ungrounded",
+        "mode": "grounded",
         "target": "users-by-id",
         "path": "/users/1",
         "generated": 5,
         "discarded": 0,
         "discardReasons": [],
-        "assertions": 19,
-        "baselinePassing": 12,
-        "baselineTotal": 19,
-        "generationMs": 3687,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "assertions": 9,
+        "baselinePassing": 8,
+        "baselineTotal": 9,
+        "generationMs": 2017,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M1",
@@ -1338,61 +1214,179 @@
           {
             "mutant": "M2",
             "category": "missing-field",
-            "killed": false
+            "killed": true
           },
           {
             "mutant": "M3",
             "category": "wrong-type",
-            "killed": true
+            "killed": false
           },
           {
             "mutant": "M5",
             "category": "status-code",
-            "killed": false
-          }
-        ]
-      },
-      {
-        "repeat": 3,
-        "mode": "ungrounded",
-        "target": "items",
-        "path": "/items",
-        "generated": 5,
-        "discarded": 0,
-        "discardReasons": [],
-        "assertions": 20,
-        "baselinePassing": 13,
-        "baselineTotal": 20,
-        "generationMs": 4392,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
-        "kills": [
-          {
-            "mutant": "M4",
-            "category": "content-type",
-            "killed": false
-          },
-          {
-            "mutant": "M7",
-            "category": "missing-field",
             "killed": true
           }
         ]
       },
       {
         "repeat": 3,
-        "mode": "ungrounded",
-        "target": "items-filtered",
-        "path": "/items?ownerId=1",
+        "mode": "grounded",
+        "target": "items",
+        "path": "/items",
         "generated": 5,
         "discarded": 0,
         "discardReasons": [],
         "assertions": 23,
-        "baselinePassing": 12,
+        "baselinePassing": 17,
         "baselineTotal": 23,
-        "generationMs": 5615,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "generationMs": 3413,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": true
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "grounded",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 9,
+        "baselinePassing": 4,
+        "baselineTotal": 9,
+        "generationMs": 2185,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": false
+          },
+          {
+            "mutant": "M8",
+            "category": "boundary",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "grounded",
+        "target": "admin-users",
+        "path": "/admin/users",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 7,
+        "baselinePassing": 4,
+        "baselineTotal": 7,
+        "generationMs": 1883,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
+        "kills": [
+          {
+            "mutant": "M6",
+            "category": "auth",
+            "killed": true
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "ungrounded",
+        "target": "users-by-id",
+        "path": "/users/1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 10,
+        "baselinePassing": 8,
+        "baselineTotal": 10,
+        "generationMs": 2155,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
+        "kills": [
+          {
+            "mutant": "M1",
+            "category": "status-code",
+            "killed": true
+          },
+          {
+            "mutant": "M2",
+            "category": "missing-field",
+            "killed": true
+          },
+          {
+            "mutant": "M3",
+            "category": "wrong-type",
+            "killed": false
+          },
+          {
+            "mutant": "M5",
+            "category": "status-code",
+            "killed": false
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "ungrounded",
+        "target": "items",
+        "path": "/items",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 13,
+        "baselinePassing": 10,
+        "baselineTotal": 13,
+        "generationMs": 2566,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
+        "kills": [
+          {
+            "mutant": "M4",
+            "category": "content-type",
+            "killed": false
+          },
+          {
+            "mutant": "M7",
+            "category": "missing-field",
+            "killed": true
+          }
+        ]
+      },
+      {
+        "repeat": 3,
+        "mode": "ungrounded",
+        "target": "items-filtered",
+        "path": "/items?ownerId=1",
+        "generated": 5,
+        "discarded": 0,
+        "discardReasons": [],
+        "assertions": 12,
+        "baselinePassing": 3,
+        "baselineTotal": 12,
+        "generationMs": 2923,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M4",
@@ -1419,12 +1413,12 @@
         "generated": 5,
         "discarded": 0,
         "discardReasons": [],
-        "assertions": 18,
-        "baselinePassing": 9,
-        "baselineTotal": 18,
-        "generationMs": 7849,
-        "provider": "groq",
-        "model": "openai/gpt-oss-120b",
+        "assertions": 6,
+        "baselinePassing": 4,
+        "baselineTotal": 6,
+        "generationMs": 2160,
+        "provider": "bedrock",
+        "model": "apac.amazon.nova-lite-v1:0",
         "kills": [
           {
             "mutant": "M6",
@@ -1435,11 +1429,11 @@
       }
     ],
     "generation": {
-      "inputTokens": 15126,
-      "outputTokens": 14458,
-      "costUsd": 0.0131124,
+      "inputTokens": 13428,
+      "outputTokens": 14387,
+      "costUsd": 0.00425856,
       "calls": 24,
-      "ms": 96937
+      "ms": 59645
     },
     "byMode": {
       "grounded": {
@@ -1450,43 +1444,43 @@
         "perRepeat": [
           {
             "repeat": 1,
-            "killed": 2,
+            "killed": 5,
             "total": 10,
-            "score": 0.2
+            "score": 0.5
           },
           {
             "repeat": 2,
-            "killed": 3,
+            "killed": 5,
             "total": 10,
-            "score": 0.3
+            "score": 0.5
           },
           {
             "repeat": 3,
-            "killed": 3,
+            "killed": 5,
             "total": 10,
-            "score": 0.3
+            "score": 0.5
           }
         ],
-        "scoreMin": 0.2,
-        "scoreMax": 0.3,
+        "scoreMin": 0.5,
+        "scoreMax": 0.5,
         "suites": 12,
-        "casesGenerated": 55,
-        "casesDiscarded": 2,
-        "assertions": 215,
-        "baselinePassRate": 0.544,
+        "casesGenerated": 60,
+        "casesDiscarded": 0,
+        "assertions": 141,
+        "baselinePassRate": 0.709,
         "mutantsEvaluated": 30,
-        "mutantsKilled": 8,
-        "mutationScore": 0.267,
+        "mutantsKilled": 15,
+        "mutationScore": 0.5,
         "byCategory": {
           "status-code": {
-            "killed": 3,
+            "killed": 6,
             "total": 6,
-            "score": 0.5
+            "score": 1
           },
           "missing-field": {
-            "killed": 3,
+            "killed": 6,
             "total": 9,
-            "score": 0.333
+            "score": 0.667
           },
           "wrong-type": {
             "killed": 0,
@@ -1504,9 +1498,9 @@
             "score": 0
           },
           "auth": {
-            "killed": 2,
+            "killed": 3,
             "total": 3,
-            "score": 0.667
+            "score": 1
           }
         },
         "byMutant": {
@@ -1523,7 +1517,7 @@
             "total": 3
           },
           "M5": {
-            "killed": 0,
+            "killed": 3,
             "total": 3
           },
           "M4": {
@@ -1531,7 +1525,7 @@
             "total": 6
           },
           "M7": {
-            "killed": 0,
+            "killed": 3,
             "total": 6
           },
           "M8": {
@@ -1539,7 +1533,7 @@
             "total": 3
           },
           "M6": {
-            "killed": 2,
+            "killed": 3,
             "total": 3
           }
         }
@@ -1552,15 +1546,15 @@
         "perRepeat": [
           {
             "repeat": 1,
-            "killed": 2,
-            "total": 10,
-            "score": 0.2
-          },
-          {
-            "repeat": 2,
             "killed": 4,
             "total": 10,
             "score": 0.4
+          },
+          {
+            "repeat": 2,
+            "killed": 5,
+            "total": 10,
+            "score": 0.5
           },
           {
             "repeat": 3,
@@ -1569,16 +1563,16 @@
             "score": 0.4
           }
         ],
-        "scoreMin": 0.2,
-        "scoreMax": 0.4,
+        "scoreMin": 0.4,
+        "scoreMax": 0.5,
         "suites": 12,
-        "casesGenerated": 55,
-        "casesDiscarded": 2,
-        "assertions": 206,
-        "baselinePassRate": 0.573,
+        "casesGenerated": 59,
+        "casesDiscarded": 1,
+        "assertions": 124,
+        "baselinePassRate": 0.718,
         "mutantsEvaluated": 30,
-        "mutantsKilled": 10,
-        "mutationScore": 0.333,
+        "mutantsKilled": 13,
+        "mutationScore": 0.433,
         "byCategory": {
           "status-code": {
             "killed": 3,
@@ -1586,14 +1580,14 @@
             "score": 0.5
           },
           "missing-field": {
-            "killed": 3,
+            "killed": 7,
             "total": 9,
-            "score": 0.333
+            "score": 0.778
           },
           "wrong-type": {
-            "killed": 2,
+            "killed": 0,
             "total": 3,
-            "score": 0.667
+            "score": 0
           },
           "content-type": {
             "killed": 0,
@@ -1606,9 +1600,9 @@
             "score": 0
           },
           "auth": {
-            "killed": 2,
+            "killed": 3,
             "total": 3,
-            "score": 0.667
+            "score": 1
           }
         },
         "byMutant": {
@@ -1617,11 +1611,11 @@
             "total": 3
           },
           "M2": {
-            "killed": 1,
+            "killed": 3,
             "total": 3
           },
           "M3": {
-            "killed": 2,
+            "killed": 0,
             "total": 3
           },
           "M5": {
@@ -1633,7 +1627,7 @@
             "total": 6
           },
           "M7": {
-            "killed": 2,
+            "killed": 4,
             "total": 6
           },
           "M8": {
@@ -1641,16 +1635,16 @@
             "total": 3
           },
           "M6": {
-            "killed": 2,
+            "killed": 3,
             "total": 3
           }
         }
       }
     },
     "ablation": {
-      "grounded": 0.267,
-      "ungrounded": 0.333,
-      "deltaPoints": -6.6
+      "grounded": 0.5,
+      "ungrounded": 0.433,
+      "deltaPoints": 6.7
     }
   }
 }

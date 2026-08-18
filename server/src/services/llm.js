@@ -102,6 +102,83 @@ export function estimateCostUsd(model, inputTokens, outputTokens) {
  * holds the shape far more consistently and the workload is small enough that
  * the price difference is fractions of a cent per evaluation run.
  */
+/**
+ * ── MODEL ROUTING BY TASK ───────────────────────────────────────────────────
+ *
+ * AGENTIQ asks the LLM for two different things, and paying one rate for both
+ * is waste. Bedrock is primary (AWS-native per docs/05_AWS_ARCHITECTURE.md,
+ * cheaper and faster than Groq, and with no free-tier tokens-per-minute limit —
+ * that limit aborted three evaluation runs). Groq is the fallback.
+ *
+ *   generation   5 executable test cases as structured JSON, grounded in an
+ *                OpenAPI operation. Long output, strict schema, once per run,
+ *                and it determines the quality of the entire suite.
+ *
+ *   explanation  Two sentences on why one assertion failed. ~200 tokens, free
+ *                prose, best-effort and time-boxed (docs/03_App_Flow.md B7).
+ *                Once per FAILURE, so it is the higher-volume task.
+ *
+ * ── THE TIERS ARE MEASURED, NOT ASSUMED ─────────────────────────────────────
+ * The obvious assignment — cheapest model for the cheap task — is wrong here,
+ * and measuring is what showed it. On the explanation task (n=6 each):
+ *
+ *   nova-micro   3/6 succeeded, mean 1115 ms
+ *   nova-lite    6/6 succeeded, mean  903 ms
+ *
+ * Micro's cheaper tokens are false economy: explanations run with maxRepairs=0
+ * by design, so half of Micro's calls produce nothing while still costing
+ * tokens. Per SUCCESSFUL explanation it is both dearer and slower than Lite.
+ *
+ * On generation the full evaluation harness was run end to end per tier, and
+ * the expensive model LOST (mutation score, 3 repeats each):
+ *
+ *   nova-lite    46.7% grounded (range 40-50%)   $0.0042 per run
+ *   nova-pro     33.3% grounded (range 30-40%)   $0.0559 per run   13x dearer
+ *   groq 120b    26.7% grounded                  $0.0131 per run
+ *
+ * Lite was ahead on every repeat, and it also left fewer behaviours unchecked
+ * (Pro additionally never killed M5, the 404 negative case). So generation uses
+ * Lite: measured best AND cheapest, which is not the usual shape of that
+ * trade-off and is worth saying out loud rather than assuming bigger is better.
+ *
+ * A consequence worth being straight about: on Bedrock both tasks currently
+ * resolve to the same model, because that is what the measurements support. The
+ * routing exists so the tiers CAN diverge — the Groq fallback already does,
+ * 120b for generation and 20b for explanation — not to manufacture a split the
+ * evidence contradicts.
+ *
+ * Every entry is overridable by environment variable, because the thing this
+ * file has already learned the hard way is that providers retire models on
+ * their own schedule.
+ */
+export const TASK = {
+  GENERATION: 'generation',
+  EXPLANATION: 'explanation',
+};
+
+export const TASK_MODELS = {
+  [TASK.GENERATION]: {
+    bedrock: () => env.BEDROCK_MODEL_ID ?? 'apac.amazon.nova-lite-v1:0',
+    groq: () => env.GROQ_MODEL ?? 'openai/gpt-oss-120b',
+  },
+  [TASK.EXPLANATION]: {
+    /**
+     * NOT `?? BEDROCK_MODEL_ID` — that term made every deployment collapse back
+     * to the generation model, because BEDROCK_MODEL_ID is always set. The
+     * explanation tier is its own setting or its own default, never inherited.
+     *
+     * Lite rather than Micro, on the measurement above.
+     */
+    bedrock: () => env.BEDROCK_MODEL_EXPLAIN ?? 'apac.amazon.nova-lite-v1:0',
+    groq: () => env.GROQ_MODEL_EXPLAIN ?? 'openai/gpt-oss-20b',
+  },
+};
+
+/** The model this provider should use for this task. */
+export function modelFor(task, provider) {
+  return TASK_MODELS[task]?.[provider]?.() ?? TASK_MODELS[TASK.GENERATION][provider]?.() ?? null;
+}
+
 export const GROQ_MODEL = 'openai/gpt-oss-120b';
 export const groqModel = () => env.GROQ_MODEL ?? GROQ_MODEL;
 
@@ -122,7 +199,7 @@ const REASONING_MODELS = /gpt-oss|qwen3/i;
 export const isReasoningModel = (model) => REASONING_MODELS.test(model);
 
 /** Groq — OpenAI-compatible chat completions with JSON mode. */
-async function callGroq({ system, prompt, maxTokens, temperature, signal }) {
+async function callGroq({ system, prompt, maxTokens, temperature, signal, model }) {
   if (!env.GROQ_API_KEY) throw new LlmError(LLM_ERROR.NO_PROVIDER, 'GROQ_API_KEY is not set');
 
   let res;
@@ -130,7 +207,7 @@ async function callGroq({ system, prompt, maxTokens, temperature, signal }) {
     res = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
       {
-        model: groqModel(),
+        model,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: prompt },
@@ -138,7 +215,7 @@ async function callGroq({ system, prompt, maxTokens, temperature, signal }) {
         response_format: { type: 'json_object' },
         temperature,
         max_tokens: maxTokens,
-        ...(isReasoningModel(groqModel()) ? { reasoning_effort: 'low' } : {}),
+        ...(isReasoningModel(model) ? { reasoning_effort: 'low' } : {}),
       },
       {
         headers: { Authorization: `Bearer ${env.GROQ_API_KEY}` },
@@ -174,7 +251,7 @@ async function callGroq({ system, prompt, maxTokens, temperature, signal }) {
   return {
     text: res.data?.choices?.[0]?.message?.content ?? '',
     provider: 'groq',
-    model: groqModel(),
+    model,
     inputTokens: usage.prompt_tokens ?? 0,
     outputTokens: usage.completion_tokens ?? 0,
   };
@@ -193,8 +270,8 @@ let bedrockClient = null;
  * `us.` prefix). A bare model id fails with "on-demand throughput isn't
  * supported" — see docs/05_AWS_ARCHITECTURE.md.
  */
-async function callBedrock({ system, prompt, maxTokens, temperature }) {
-  if (!env.BEDROCK_MODEL_ID) {
+async function callBedrock({ system, prompt, maxTokens, temperature, model }) {
+  if (!model) {
     throw new LlmError(LLM_ERROR.NO_PROVIDER, 'BEDROCK_MODEL_ID is not set');
   }
 
@@ -204,7 +281,7 @@ async function callBedrock({ system, prompt, maxTokens, temperature }) {
   let res;
   try {
     res = await bedrockClient.send(new ConverseCommand({
-      modelId: env.BEDROCK_MODEL_ID,
+      modelId: model,
       system: [{ text: system }],
       messages: [{ role: 'user', content: [{ text: prompt }] }],
       inferenceConfig: { maxTokens, temperature },
@@ -222,7 +299,7 @@ async function callBedrock({ system, prompt, maxTokens, temperature }) {
   return {
     text: res.output?.message?.content?.[0]?.text ?? '',
     provider: 'bedrock',
-    model: env.BEDROCK_MODEL_ID,
+    model,
     inputTokens: res.usage?.inputTokens ?? 0,
     outputTokens: res.usage?.outputTokens ?? 0,
   };
@@ -266,6 +343,7 @@ export async function generateJSON({
   temperature = 0.2,
   maxRepairs = 1,
   providers = providerOrder(),
+  task = TASK.GENERATION,
   signal,
 } = {}) {
   if (!providers.length) {
@@ -296,7 +374,10 @@ export async function generateJSON({
 
       let raw;
       try {
-        raw = await call({ system, prompt: effectivePrompt, maxTokens, temperature, signal });
+        raw = await call({
+          system, prompt: effectivePrompt, maxTokens, temperature, signal,
+          model: modelFor(task, name),
+        });
       } catch (err) {
         // A rate limit is a "come back shortly", not a failure of this
         // provider. Wait once — honouring Retry-After when the provider sent
