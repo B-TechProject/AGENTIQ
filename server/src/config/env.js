@@ -70,8 +70,8 @@ export const envSchema = z
     // Per-task overrides — see TASK_MODELS in services/llm.js.
     GROQ_MODEL_EXPLAIN: z.string().optional(),
     BEDROCK_MODEL_EXPLAIN: z.string().optional(),
-    LLM_PRIMARY: z.enum(['groq', 'bedrock']).default('groq'),
-    LLM_FALLBACK: z.enum(['groq', 'bedrock']).default('bedrock'),
+    LLM_PRIMARY: z.enum(['groq', 'bedrock']).default('bedrock'),
+    LLM_FALLBACK: z.enum(['groq', 'bedrock']).default('groq'),
 
     // ── AWS (optional — see docs/05_AWS_ARCHITECTURE.md) ─────────────────────
     // Deliberately no AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY: credentials come
