@@ -27,6 +27,7 @@
     "test:fixtures": "npm --workspace fixtures run test"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
     "concurrently": "10.0.5"
   }
 }

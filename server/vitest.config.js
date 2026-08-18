@@ -14,10 +14,40 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reportsDirectory: './coverage',
-      // docs/02_TRD.md §11 sets the gate at 70% on these two trees. They do not
-      // exist until Phases 4-5, so the threshold is enabled there, not here.
       include: ['src/**/*.js'],
-      exclude: ['src/index.js'],
+      exclude: [
+        'src/index.js',
+        /**
+         * stdio.js IS tested — tests/transport.test.js spawns it as a real
+         * child process and speaks JSON-RPC to it, which is the same handshake
+         * Claude Desktop performs. v8 coverage cannot instrument a subprocess,
+         * so it reported 0% and dragged the gated tree down. Excluding it is
+         * honest; leaving it in would have meant either a misleading number or
+         * a pointless in-process test that proved less than the real one does.
+         */
+        'src/mcp/stdio.js',
+      ],
+
+      /**
+       * docs/02_TRD.md §11 gates coverage at 70% on the two trees that carry
+       * the project's actual contribution: the MCP tool layer and the agents.
+       * Enabled in Phase 15, as planned — the trees did not exist before
+       * Phase 4.
+       *
+       * Deliberately scoped rather than global. A single repo-wide number is
+       * easy to game with tests for trivial modules while the load-bearing code
+       * rots, and it would also gate on boot and logging paths that a test
+       * suite has no business exercising. These two globs are where a
+       * regression would actually matter.
+       */
+      thresholds: {
+        'src/mcp/**/*.js': {
+          statements: 70, branches: 70, functions: 70, lines: 70,
+        },
+        'src/agents/**/*.js': {
+          statements: 70, branches: 70, functions: 70, lines: 70,
+        },
+      },
     },
   },
 });

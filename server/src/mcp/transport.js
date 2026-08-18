@@ -13,7 +13,7 @@
  */
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { randomUUID } from 'node:crypto';
-import { mcp } from './registry.js';
+import { createMcpServer } from './registry.js';
 import { logger } from '../lib/logger.js';
 
 /**
@@ -63,6 +63,20 @@ export async function handleMcpRequest(req, res) {
       });
     }
 
+    /**
+     * A SERVER PER SESSION, not the shared singleton.
+     *
+     * The SDK binds a server to one transport, so calling connect() on the
+     * module singleton for each session meant the second concurrent client
+     * received a 500. Building a fresh server here also lets the session carry
+     * the authenticated caller's id, so tool calls arriving over HTTP are
+     * audited against a real user instead of null.
+     */
+    const server = createMcpServer({
+      userId: req.user?._id ?? null,
+      sessionId: `mcp-http:${req.user?._id ?? 'anon'}`,
+    });
+
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (id) => {
@@ -76,9 +90,12 @@ export async function handleMcpRequest(req, res) {
         sessions.delete(transport.sessionId);
         logger.info({ sessionId: transport.sessionId }, 'MCP session closed');
       }
+      // The per-session server goes with it; leaving it attached would leak a
+      // server object for every session the process has ever served.
+      server.close?.().catch(() => {});
     };
 
-    await mcp.connect(transport);
+    await server.connect(transport);
     return await transport.handleRequest(req, res, req.body);
   } catch (err) {
     logger.error({ err: err.message }, 'MCP transport error');

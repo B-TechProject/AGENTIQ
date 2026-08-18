@@ -136,23 +136,55 @@ export function defineTool({
     handler: guarded,
   });
 
-  // The SDK wants a raw shape rather than a ZodObject for its own validation.
-  const shape = inputSchema instanceof z.ZodObject ? inputSchema.shape : undefined;
-
-  mcp.registerTool(
-    name,
-    { title, description, inputSchema: shape },
-    async (args, extra) => {
-      const result = await guarded(args, {
-        userId: extra?.sessionId ? null : null,
-        sessionId: extra?.sessionId ?? 'mcp',
-      });
-      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
-    },
-  );
+  attachTool(mcp, TOOLS[TOOLS.length - 1], { sessionId: 'mcp' });
 
   logger.debug({ tool: name, riskClass }, 'MCP tool registered');
   return guarded;
+}
+
+/** The SDK wants a raw shape rather than a ZodObject for its own validation. */
+const shapeOf = (schema) => (schema instanceof z.ZodObject ? schema.shape : undefined);
+
+/**
+ * Registers one already-guarded tool on an McpServer, bound to an identity.
+ *
+ * The identity is fixed at REGISTRATION time rather than read per call, because
+ * an MCP session belongs to exactly one authenticated caller for its whole
+ * life. Binding it here is what lets audit rows name the user who made the
+ * call — the previous code passed `userId: extra?.sessionId ? null : null`,
+ * which is null on both branches, so every tool call arriving over MCP was
+ * audited against nobody.
+ */
+function attachTool(server, tool, { userId = null, sessionId = 'mcp' } = {}) {
+  server.registerTool(
+    tool.name,
+    { title: tool.title, description: tool.description, inputSchema: shapeOf(tool.inputSchema) },
+    async (args) => {
+      const result = await tool.handler(args, { userId, sessionId });
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    },
+  );
+}
+
+/**
+ * A FRESH McpServer carrying every registered tool, bound to one caller.
+ *
+ * Why this exists: `mcp` is a module singleton, and the SDK's connect() binds a
+ * server to ONE transport. The HTTP transport called mcp.connect() for every
+ * session, so opening a second concurrent session threw and the client got a
+ * 500 — AGENTIQ's remote MCP endpoint supported exactly one client at a time.
+ * Two browser tabs, or Claude Desktop alongside the web UI, and one of them
+ * broke. Found in Phase 15 by testing two sessions instead of one.
+ *
+ * The singleton stays for stdio, where the process genuinely serves one client.
+ */
+export function createMcpServer({ userId = null, sessionId = 'mcp' } = {}) {
+  const server = new McpServer(
+    { name: 'agentiq', version: '2.0.0' },
+    { capabilities: { tools: {} } },
+  );
+  for (const tool of TOOLS) attachTool(server, tool, { userId, sessionId });
+  return server;
 }
 
 /** Look up a registered tool by name. */

@@ -5,12 +5,14 @@
  * handshake Claude Desktop performs. That is the demo in docs/03_App_Flow.md
  * Part E step 8, so it is worth proving it works rather than assuming.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { registerAllTools, EXPECTED_TOOLS } from '../src/mcp/tools/index.js';
+import { sessionCount, closeAllSessions } from '../src/mcp/transport.js';
+import { connectTestDb, disconnectTestDb } from './helpers/mongo.js';
 
 const STDIO = path.resolve(import.meta.dirname, '../src/mcp/stdio.js');
 
@@ -120,5 +122,139 @@ describe('streamable-HTTP transport', () => {
     const res = await request(app).get('/api/mcp/tools');
     expect(res.status).toBe(200);
     expect(res.body.data.count).toBe(9);
+  });
+});
+
+/**
+ * A REAL MCP SESSION OVER HTTP.
+ *
+ * Until Phase 15 the only HTTP-transport tests were "returns 401" and "does not
+ * shadow the sibling routes" — so the claim that a remote MCP client can drive
+ * AGENTIQ's tools over HTTP was never actually exercised. transport.js sat at
+ * 3.7% line coverage. These tests perform the same initialise -> tools/list
+ * handshake a real client performs, over the authenticated endpoint.
+ *
+ * (stdio.js reads as 0% in the coverage table and is NOT untested — the tests
+ * above drive it as a spawned child process, which v8 coverage cannot see into.
+ * It is excluded in vitest.config.js rather than left looking neglected.)
+ */
+describe('streamable-HTTP transport: a real session', () => {
+  const app = createApp({ logging: false });
+  let token;
+
+  /** The Accept header the SDK requires; it answers JSON or SSE per request. */
+  const ACCEPT = 'application/json, text/event-stream';
+
+  beforeAll(async () => {
+    await connectTestDb();
+    await registerAllTools();
+    const res = await request(app).post('/api/auth/register').send({
+      displayName: 'MCP Client', email: 'mcp@example.com',
+      password: 'correct-horse-battery', confirmPassword: 'correct-horse-battery',
+    });
+    token = res.body.data.token;
+  });
+
+  afterAll(async () => {
+    await closeAllSessions();
+    await disconnectTestDb();
+  });
+
+  /** Bodies come back as JSON or as an SSE frame; accept either. */
+  const parseRpc = (res) => {
+    if (res.body && Object.keys(res.body).length) return res.body;
+    const line = String(res.text ?? '').split('\n').find((l) => l.startsWith('data:'));
+    return line ? JSON.parse(line.slice(5).trim()) : null;
+  };
+
+  const post = (body, sessionId) => {
+    const r = request(app).post('/api/mcp')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Accept', ACCEPT)
+      .set('Content-Type', 'application/json');
+    if (sessionId) r.set('mcp-session-id', sessionId);
+    return r.send(body);
+  };
+
+  it('completes an initialise handshake and issues a session id', async () => {
+    const before = sessionCount();
+    const res = await post(INITIALISE);
+
+    expect(res.status).toBe(200);
+    const sessionId = res.headers['mcp-session-id'];
+    expect(sessionId).toBeTruthy();
+    expect(sessionCount()).toBe(before + 1);
+
+    const rpc = parseRpc(res);
+    expect(rpc?.result?.serverInfo?.name).toBe('agentiq');
+  });
+
+  it('lists all nine tools to a client over HTTP', async () => {
+    const init = await post(INITIALISE);
+    const sessionId = init.headers['mcp-session-id'];
+
+    // The SDK requires the initialized notification before normal requests.
+    await post({ jsonrpc: '2.0', method: 'notifications/initialized' }, sessionId);
+
+    const res = await post(
+      { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }, sessionId,
+    );
+    expect(res.status).toBe(200);
+
+    const names = (parseRpc(res)?.result?.tools ?? []).map((t) => t.name);
+    expect(names).toHaveLength(EXPECTED_TOOLS.length);
+    expect(names).toEqual(expect.arrayContaining(EXPECTED_TOOLS));
+  });
+
+  it('refuses an unknown session id rather than silently opening a new one', async () => {
+    // Silently creating a session would look like success while losing the
+    // client's context — a much harder failure to diagnose than a 404.
+    const res = await post({ jsonrpc: '2.0', id: 3, method: 'tools/list', params: {} },
+      '00000000-0000-4000-8000-000000000000');
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('MCP_SESSION_NOT_FOUND');
+  });
+
+  it('refuses a non-POST that carries no session', async () => {
+    const res = await request(app).get('/api/mcp')
+      .set('Authorization', `Bearer ${token}`).set('Accept', ACCEPT);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('MCP_SESSION_REQUIRED');
+  });
+
+  /**
+   * REGRESSION — two clients at once.
+   *
+   * transport.js called connect() on the MODULE SINGLETON McpServer for every
+   * session, and the SDK binds a server to one transport, so the second
+   * concurrent client received a 500. Two browser tabs, or Claude Desktop
+   * alongside the web UI, and one of them was broken. Every prior test opened
+   * exactly one session, which is why it survived to Phase 15.
+   */
+  it('serves two concurrent clients without either breaking', async () => {
+    const a = await post(INITIALISE);
+    const sidA = a.headers['mcp-session-id'];
+    await post({ jsonrpc: '2.0', method: 'notifications/initialized' }, sidA);
+    expect((await post({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }, sidA)).status)
+      .toBe(200);
+
+    const b = await post(INITIALISE);
+    expect(b.status).toBe(200);
+    const sidB = b.headers['mcp-session-id'];
+    expect(sidB).not.toBe(sidA);
+    await post({ jsonrpc: '2.0', method: 'notifications/initialized' }, sidB);
+
+    // Neither session may disturb the other.
+    expect((await post({ jsonrpc: '2.0', id: 3, method: 'tools/list', params: {} }, sidA)).status)
+      .toBe(200);
+    expect((await post({ jsonrpc: '2.0', id: 4, method: 'tools/list', params: {} }, sidB)).status)
+      .toBe(200);
+  });
+
+  it('closeAllSessions empties the registry', async () => {
+    await post(INITIALISE);
+    expect(sessionCount()).toBeGreaterThan(0);
+    await closeAllSessions();
+    expect(sessionCount()).toBe(0);
   });
 });

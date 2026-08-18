@@ -12,6 +12,7 @@ import { Router } from 'express';
 import { mongoStatus } from '../lib/db.js';
 import { isGoogleOAuthConfigured } from '../config/passport.js';
 import { env } from '../config/env.js';
+import { providerOrder, modelFor, TASK } from '../services/llm.js';
 import { ok } from '../utils/http.js';
 
 const router = Router();
@@ -24,6 +25,29 @@ export function llmProviders() {
   ];
 }
 
+/**
+ * The chain as it will ACTUALLY resolve, with the model each task will use.
+ *
+ * Worth reporting rather than inferring from configuration: providerOrder()
+ * silently drops a provider whose credentials or model id are missing, so
+ * "LLM_PRIMARY=bedrock" in the environment does not mean bedrock is the one
+ * answering. That gap ran an entire evaluation phase on the wrong provider
+ * before anyone noticed. One request to /api/health now settles it.
+ */
+export function llmChain() {
+  const order = providerOrder();
+  return {
+    order,
+    hasFallback: order.length > 1,
+    models: Object.fromEntries(
+      Object.values(TASK).map((task) => [
+        task,
+        Object.fromEntries(order.map((p) => [p, modelFor(task, p)])),
+      ]),
+    ),
+  };
+}
+
 router.get('/health', (req, res) => {
   const mongo = mongoStatus();
   return ok(res, {
@@ -31,6 +55,7 @@ router.get('/health', (req, res) => {
     uptime: Math.round(process.uptime()),
     mongo,
     llmProviders: llmProviders(),
+    llmChain: llmChain(),
     googleOAuth: isGoogleOAuthConfigured() ? 'configured' : 'disabled',
     env: env.NODE_ENV,
   });

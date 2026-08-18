@@ -64,6 +64,19 @@ jobs:
           CI: 'true'
           MONGO_TEST_URI: mongodb://127.0.0.1:27017
 
+      # Runs the server suite again under v8 instrumentation and FAILS the build
+      # if src/mcp/** or src/agents/** drops below the 70% gate in
+      # docs/02_TRD.md §11. Enabled in Phase 15, when the trees were complete.
+      - name: Coverage gate (mcp/** and agents/** >= 70%)
+        run: npm --workspace server run test:coverage
+        env:
+          NODE_ENV: test
+          CI: 'true'
+          MONGO_TEST_URI: mongodb://127.0.0.1:27017
+
+      - name: Audit (high and critical only)
+        run: npm audit --audit-level=high
+
       - name: Architecture guard summary
         if: always()
         run: |
