@@ -252,6 +252,7 @@ docs/            PRD, TRD, app flow, UI spec, AWS architecture, evaluation
 
 | | |
 | --- | --- |
+| [docs/00_PROJECT_WALKTHROUGH.md](docs/00_PROJECT_WALKTHROUGH.md) | **Start here.** Everything that exists, why, and what is still weak |
 | [docs/01_PRD.md](docs/01_PRD.md) | What is being built and why, with acceptance criteria |
 | [docs/02_TRD.md](docs/02_TRD.md) | Technical design |
 | [docs/03_App_Flow.md](docs/03_App_Flow.md) | Screen-by-screen behaviour and the demo script |
